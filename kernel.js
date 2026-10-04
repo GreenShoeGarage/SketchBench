@@ -1,0 +1,44 @@
+/* SKETCHBENCH geometry kernel. Copyright 2026 Green Shoe Garage. GPL-3.0-only. */
+(function(root){
+'use strict';
+const V={add:(a,b)=>a.map((v,i)=>v+b[i]),sub:(a,b)=>a.map((v,i)=>v-b[i]),mul:(a,s)=>a.map(v=>v*s),dot:(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],len:a=>Math.hypot(...a),unit:a=>V.mul(a,1/(V.len(a)||1))};
+function normal(vertices,face){let n=[0,0,0];for(let i=0;i<face.length;i++){const a=vertices[face[i]],b=vertices[face[(i+1)%face.length]];n[0]+=(a[1]-b[1])*(a[2]+b[2]);n[1]+=(a[2]-b[2])*(a[0]+b[0]);n[2]+=(a[0]-b[0])*(a[1]+b[1]);}return V.unit(n);}
+function triangulate(v,f){
+ if(f.length<3)return [];if(f.length===3)return [f.slice()];
+ const n=normal(v,f),drop=n.map(Math.abs).indexOf(Math.max(...n.map(Math.abs))),axes=[0,1,2].filter(i=>i!==drop),p=f.map(i=>axes.map(a=>v[i][a]));
+ const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+ const area=p.reduce((s,a,i)=>s+a[0]*p[(i+1)%p.length][1]-p[(i+1)%p.length][0]*a[1],0),sign=area>=0?1:-1,idx=f.map((_,i)=>i),out=[];
+ let guard=0;while(idx.length>3&&guard++<f.length*f.length){let found=false;for(let k=0;k<idx.length;k++){const a=idx[(k+idx.length-1)%idx.length],b=idx[k],c=idx[(k+1)%idx.length];if(cross(p[a],p[b],p[c])*sign<=1e-9)continue;
+ const inside=idx.some(j=>j!==a&&j!==b&&j!==c&&cross(p[a],p[b],p[j])*sign>=-1e-9&&cross(p[b],p[c],p[j])*sign>=-1e-9&&cross(p[c],p[a],p[j])*sign>=-1e-9);
+ if(inside)continue;out.push([f[a],f[b],f[c]]);idx.splice(k,1);found=true;break;}if(!found)throw Error('Profile has crossing or overlapping edges. Draw a simple closed outline.');}
+ if(idx.length===3)out.push(idx.map(i=>f[i]));return out;
+}
+function bounds(objects){let lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(const o of objects)for(const p of o.vertices)for(let i=0;i<3;i++){lo[i]=Math.min(lo[i],p[i]);hi[i]=Math.max(hi[i],p[i]);}if(!Number.isFinite(lo[0]))lo=hi=[0,0,0];return {lo,hi,size:V.sub(hi,lo),center:V.mul(V.add(lo,hi),.5)};}
+function profile(points){if(points.length<3)throw Error('A face needs at least three points.');const m={vertices:points.map(p=>p.slice()),faces:[points.map((_,i)=>i)],edges:[]};triangulate(m.vertices,m.faces[0]);if(V.len(normal(m.vertices,m.faces[0]))<.5)throw Error('The profile has no area.');return m;}
+function extrude(mesh,fi,d){if(!Number.isFinite(d)||Math.abs(d)<.00001)throw Error('Enter a nonzero distance.');const m=JSON.parse(JSON.stringify(mesh)),f=m.faces[fi];if(!f)throw Error('Select a face first.');const n=normal(m.vertices,f),start=m.vertices.length,newF=f.map((id,i)=>{m.vertices.push(V.add(m.vertices[id],V.mul(n,d)));return start+i;});
+ if(m.faces.length===1){if(d>0){m.faces[fi]=f.slice().reverse();m.faces.push(newF);}else{m.faces[fi]=f.slice();m.faces.push(newF.slice().reverse());}for(let i=0;i<f.length;i++){const j=(i+1)%f.length;const side=[f[i],f[j],newF[j],newF[i]];m.faces.push(d>0?side:side.reverse());}}
+ else{m.faces[fi]=newF;for(let i=0;i<f.length;i++){const j=(i+1)%f.length;m.faces.push([f[i],f[j],newF[j],newF[i]]);}}
+ return m;
+}
+function box(w,d,h){return extrude(profile([[0,0,0],[w,0,0],[w,d,0],[0,d,0]]),0,h);}
+function cylinder(r,h,n=32,top=r){const v=[],f=[];for(let z=0;z<2;z++)for(let i=0;i<n;i++){const a=i/n*Math.PI*2,rr=z?top:r;v.push([Math.cos(a)*rr,Math.sin(a)*rr,z*h]);}f.push(Array.from({length:n},(_,i)=>n-1-i));if(top>0)f.push(Array.from({length:n},(_,i)=>n+i));
+ for(let i=0;i<n;i++){let j=(i+1)%n;f.push(top===0?[i,j,n+i]:[i,j,n+j,n+i]);}return weld({vertices:v,faces:f,edges:[]});}
+function sphere(r,n=24){const v=[[0,0,-r]],f=[],lat=Math.max(6,Math.floor(n/2));for(let j=1;j<lat;j++){let phi=-Math.PI/2+j/lat*Math.PI;for(let i=0;i<n;i++){let a=i/n*Math.PI*2;v.push([r*Math.cos(phi)*Math.cos(a),r*Math.cos(phi)*Math.sin(a),r*Math.sin(phi)]);}}
+ const top=v.length;v.push([0,0,r]);for(let i=0;i<n;i++){let k=(i+1)%n;f.push([0,1+k,1+i]);for(let j=0;j<lat-2;j++){let a=1+j*n+i,b=1+j*n+k;f.push([a,b,b+n,a+n]);}f.push([1+(lat-2)*n+i,1+(lat-2)*n+k,top]);}return {vertices:v,faces:f,edges:[]};}
+function torus(r,t,n=32){const v=[],f=[],s=12;for(let i=0;i<n;i++)for(let j=0;j<s;j++){const a=i/n*2*Math.PI,b=j/s*2*Math.PI;v.push([(r+t*Math.cos(b))*Math.cos(a),(r+t*Math.cos(b))*Math.sin(a),t*Math.sin(b)]);}for(let i=0;i<n;i++)for(let j=0;j<s;j++)f.push([i*s+j,((i+1)%n)*s+j,((i+1)%n)*s+(j+1)%s,i*s+(j+1)%s]);return {vertices:v,faces:f,edges:[]};}
+function weld(m){const map=new Map(),v=[],ids=m.vertices.map(p=>{const k=p.map(x=>x.toFixed(7)).join(',');if(!map.has(k)){map.set(k,v.length);v.push(p);}return map.get(k);});return {vertices:v,faces:m.faces.map(f=>[...new Set(f.map(i=>ids[i]))]).filter(f=>f.length>=3),edges:(m.edges||[]).map(e=>e.map(i=>ids[i]))};}
+function transform(m,fn){m.vertices=m.vertices.map(fn);return m;}
+function rotate(p,axis,deg,c=[0,0,0]){const a=deg*Math.PI/180,q=V.sub(p,c),i=(axis+1)%3,j=(axis+2)%3,x=q[i]*Math.cos(a)-q[j]*Math.sin(a),y=q[i]*Math.sin(a)+q[j]*Math.cos(a);q[i]=x;q[j]=y;return V.add(q,c);}
+function edges(m){const set=new Map();for(const f of m.faces)for(let i=0;i<f.length;i++){const a=f[i],b=f[(i+1)%f.length],key=[a,b].sort((x,y)=>x-y).join(',');if(!set.has(key))set.set(key,[a,b]);}for(const e of m.edges||[])set.set(e.join(','),e);return [...set.values()];}
+function triangles(m){return m.faces.flatMap((f,face)=>triangulate(m.vertices,f).map(ids=>({face,ids,points:ids.map(i=>m.vertices[i])})));}
+function stats(m){let area=0,vol=0;for(const t of triangles(m)){let [a,b,c]=t.points;area+=V.len(V.cross(V.sub(b,a),V.sub(c,a)))/2;vol+=V.dot(a,V.cross(b,c))/6;}const e=new Map();for(const f of m.faces)for(let i=0;i<f.length;i++){const a=f[i],b=f[(i+1)%f.length],k=[a,b].sort((a,b)=>a-b).join(',');const rec=e.get(k)||{count:0,balance:0};rec.count++;rec.balance+=a<b?1:-1;e.set(k,rec);}const closed=e.size>0&&[...e.values()].every(e=>e.count===2&&e.balance===0);return {area,volume:closed?Math.abs(vol):null,closed,triangles:triangles(m).length};}
+function stl(objects){let out='solid sketchbench\n';for(const o of objects)for(const {points:[a,b,c]} of triangles(o)){const n=V.unit(V.cross(V.sub(b,a),V.sub(c,a)));out+=` facet normal ${n.join(' ')}\n  outer loop\n${[a,b,c].map(p=>'   vertex '+p.join(' ')).join('\n')}\n  endloop\n endfacet\n`;}return out+'endsolid sketchbench\n';}
+function obj(objects){let out='# SKETCHBENCH; units: millimeters\n',offset=1;for(const o of objects){out+='o '+o.name.replace(/[^\w-]/g,'_')+'\n';out+=o.vertices.map(p=>'v '+p.join(' ')).join('\n')+'\n';out+=o.faces.map(f=>'f '+f.map(i=>i+offset).join(' ')).join('\n')+'\n';out+=(o.edges||[]).map(e=>'l '+e.map(i=>i+offset).join(' ')).join('\n')+'\n';offset+=o.vertices.length;}return out;}
+function parseOBJ(text){const v=[],faces=[],ed=[];for(const line of text.split(/\r?\n/)){const a=line.trim().split(/\s+/);if(a[0]==='v')v.push(a.slice(1,4).map(Number));if(a[0]==='f'||a[0]==='l'){const ids=a.slice(1).map(s=>{const n=Number(s.split('/')[0]);return n<0?v.length+n:n-1;});if(a[0]==='f')faces.push(ids);else for(let i=1;i<ids.length;i++)ed.push([ids[i-1],ids[i]]);}}return {vertices:v,faces,edges:ed};}
+function parseSTL(buffer){const data=new DataView(buffer),binary=buffer.byteLength>=84&&84+data.getUint32(80,true)*50===buffer.byteLength,v=[],f=[];
+ if(binary){const count=data.getUint32(80,true);if(count>60000)throw Error('STL is too large; limit is 60,000 triangles.');for(let i=0;i<count;i++){const ids=[];for(let j=0;j<3;j++){let pos=84+i*50+12+j*12;ids.push(v.length);v.push([0,4,8].map(k=>data.getFloat32(pos+k,true)));}f.push(ids);}}
+ else{const text=new TextDecoder().decode(buffer),re=/vertex\s+([-+\deE.]+)\s+([-+\deE.]+)\s+([-+\deE.]+)/g;let a;while((a=re.exec(text))){v.push(a.slice(1).map(Number));if(v.length%3===0)f.push([v.length-3,v.length-2,v.length-1]);if(v.length>180000)throw Error('STL is too large.');}}
+ return weld({vertices:v,faces:f,edges:[]});}
+function validateMesh(o){if(!o||!Array.isArray(o.vertices)||!Array.isArray(o.faces)||o.vertices.length>100000||o.faces.length>60000)throw Error('Invalid or oversized mesh.');if(!o.vertices.length||o.vertices.some(p=>!Array.isArray(p)||p.length!==3||p.some(n=>!Number.isFinite(n)||Math.abs(n)>1e7)))throw Error('Invalid vertex coordinates.');if(o.faces.some(f=>!Array.isArray(f)||f.length<3||f.length>1000||f.some(i=>!Number.isInteger(i)||i<0||i>=o.vertices.length)))throw Error('Invalid face index.');if(o.edges&&!Array.isArray(o.edges))throw Error('Invalid edges.');if((o.edges||[]).some(e=>!Array.isArray(e)||e.length!==2||e.some(i=>!Number.isInteger(i)||i<0||i>=o.vertices.length)))throw Error('Invalid edge index.');triangles(o);return o;}
+const K={V,normal,triangulate,bounds,profile,extrude,box,cylinder,sphere,torus,weld,transform,rotate,edges,triangles,stats,stl,obj,parseOBJ,parseSTL,validateMesh};if(typeof module!=='undefined')module.exports=K;else root.K=K;
+})(typeof window!=='undefined'?window:globalThis);
