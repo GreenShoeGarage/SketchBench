@@ -1,6 +1,6 @@
 // Controller tests use a DOM stub. They do not render or simulate a real browser.
 const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
-const K=require('../interchange.js'),app=['app.js','precision.js','studio.js','projects.js','export-ui.js','finish.js','examples.js','bootstrap.js'].map(n=>fs.readFileSync(path.join(__dirname,'..',n),'utf8')).join('\n'),shell=fs.readFileSync(path.join(__dirname,'../shell.html'),'utf8');
+const K=require('../interchange.js'),app=['app.js','precision.js','sketch-regions.js','studio.js','projects.js','export-ui.js','finish.js','examples.js','bootstrap.js'].map(n=>fs.readFileSync(path.join(__dirname,'..',n),'utf8')).join('\n'),shell=fs.readFileSync(path.join(__dirname,'../shell.html'),'utf8');
 function environment(storage=new Map()){
  const nodes=new Map(),all=[],timers=new Map();let seq=0;const errors=[],downloads=[];
  const context2d=new Proxy({measureText:t=>({width:t.length*7})},{get:(o,k)=>k in o?o[k]:(()=>{}),set:(o,k,v)=>(o[k]=v,true)});

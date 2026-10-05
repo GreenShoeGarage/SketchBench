@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-rc.4 — 2026-10-04
+
+Added selection and extrusion of nested sketch regions. Clicking between coplanar closed outlines selects the border, while clicking the center selects the smaller profile. Selection highlighting excludes inner loops. Numeric and dragged border extrusion create a closed solid with cutouts while keeping the center profiles flat and independently editable. Touching/crossing outlines are rejected with a clear message, and failed operations preserve the sketches. Existing saved projects work without migration. Added nine regression tests; browser acceptance remains outstanding.
+
 ## 1.0.0-rc.3 — 2026-10-04
 
 Fixed the grid showing through opaque models. The WebGL workplane grid and world-axis guides now draw as a backdrop without writing model depth, matching the Canvas fallback. Solid faces cover them from above, below and on face-aligned workplanes. Empty space, openings and wireframe retain visible guides; model-to-model depth remains enabled. Added two software draw-batch regression checks; actual GPU/browser acceptance is still outstanding.

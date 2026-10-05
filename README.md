@@ -1,4 +1,4 @@
-# SKETCHBENCH 1.0.0-rc.3
+# SKETCHBENCH 1.0.0-rc.4
 
 A self-hosted, local-first 3D sketching and mesh-modeling instrument for Green Shoe Garage.
 
@@ -42,10 +42,12 @@ Open `http://localhost:8080`. Uploading the other package files is optional: all
 - XY, XZ, YZ and selected-face work planes; elevation; plane-facing view.
 - Grid and vertex snapping, U/V direction constraints and Shift direction locking.
 - Advanced mesh vertex coordinates.
+- Nested coplanar closed profiles: select the border independently from its center; the selection highlight excludes the inner outlines.
 
 ### Shape
 
 - Flat-profile extrusion; solid-face push/pull with shared-vertex motion, collapse checks and bounded intersection checks.
+- Border extrusion by dragging or numeric distance, leaving the inner profiles flat. Supports multiple inner loops, either extrusion direction and tilted planes.
 - Box, cylinder, cone, sphere and torus primitives with numeric dimensions.
 - Union, subtraction and intersection of two closed meshes. Optional hidden source preservation and undo.
 - Selected-face offsets; splines from open-line control points; profile sweeps along open paths.
@@ -97,6 +99,14 @@ Open `http://localhost:8080`. Uploading the other package files is optional: all
 
 On touchscreens use explicit Orbit/Pan tools and zoom controls; pinch is not implemented. The inspector overlays the viewport on narrow screens. Pointer drawing is not fully accessible to nonvisual users; numeric solid/sketch creation and object-list editing provide keyboard paths. Mobile and assistive-technology behavior still need browser acceptance.
 
+## Extrude a rectangular frame
+
+Draw one rectangle inside another on the same work plane. Choose **Push/pull**, then click the area **between the outlines**. Only the border is highlighted; the inspector says **Border region**. Drag it or enter a distance and press Apply. The inner rectangle stays flat and can be selected and extruded separately by clicking its center. Existing saved sketches gain this behavior automatically.
+
+Inner profiles must be visible, planar, closed, fully contained, and separated from the outer boundary and other inner outlines. Nested regions use their immediate inner boundaries. Hidden profiles do not form cutouts; hide an inner profile to extrude the full outer face. Locked inner profiles can define a cutout and remain unchanged. Touching, crossing or overlapping outlines require separation or explicit solid boolean modeling.
+
+Region extrusion supports up to 16 inner outlines and 1,000 total outline vertices, subject to the existing boolean complexity limits. If geometry cannot be validated, the original sketches are preserved. Centers remain separate flat profiles; select the resulting frame when exporting only that solid to STL. Boolean-generated caps contain multiple mesh faces; there is no linked parametric extrusion history.
+
 ## Data and recovery
 
 - Everything stays in your browser, scoped by origin and application directory. Separate installation directories use separate stores.
@@ -142,6 +152,7 @@ The deployable HTML is self-contained. Corresponding editable source is included
 | `interchange.js` | GLB, OBJ/MTL and ZIP codecs |
 | `app.js` | Viewport, interactions and baseline controller |
 | `precision.js` | Numeric sketching and face-plane controls |
+| `sketch-regions.js` | Nested-profile selection, border highlighting and extrusion |
 | `studio.js` | Solid/detail commands, annotations and views |
 | `projects.js` | Schema migration, storage, projects, layers and reusable parts |
 | `export-ui.js`, `finish.js` | Interchange UI, printing, contextual help and geometry cache |

@@ -1,7 +1,7 @@
 const K=require('./interchange.js'),fs=require('node:fs'),path=require('node:path');let seq=0;
 const move=(m,p)=>K.transform(m,v=>K.V.add(v,p));
 const obj=(name,mesh,color='#70b69b')=>({id:'example-'+(++seq),name,color,visible:true,locked:false,group:null,layer:null,...mesh});
-const doc=(name,objects)=>({app:'SKETCHBENCH',schema:2,version:'1.0.0-rc.3',projectId:'example-'+(++seq),name,units:'mm',objects,layers:[],annotations:[],views:[],components:[]});
+const doc=(name,objects)=>({app:'SKETCHBENCH',schema:2,version:'1.0.0-rc.4',projectId:'example-'+(++seq),name,units:'mm',objects,layers:[],annotations:[],views:[],components:[]});
 let bracket=K.boolean(K.box(60,40,6),move(K.box(60,6,50),[0,34,6]),'union');
 for(const x of [15,45])bracket=K.boolean(bracket,move(K.cylinder(3,10,24),[x,18,-2]),'subtract');
 let hole=K.cylinder(4,12,24);K.transform(hole,p=>K.rotate(p,0,90));move(hole,[30,43,32]);bracket=K.boolean(bracket,hole,'subtract');

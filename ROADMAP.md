@@ -1,6 +1,6 @@
 # SKETCHBENCH release status and roadmap
 
-Current deliverable: **1.0.0-rc.3**, dated October 4, 2026.
+Current deliverable: **1.0.0-rc.4**, dated October 4, 2026.
 
 The user authorized development in batches through v1.0 without intermediate permission requests. All scheduled implementation batches were completed; the stable release gate remains open because the browser environment blocks local application URLs. An RC identifies this limitation honestly.
 

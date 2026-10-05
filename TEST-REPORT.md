@@ -1,4 +1,4 @@
-# SKETCHBENCH 1.0.0-rc.3 verification
+# SKETCHBENCH 1.0.0-rc.4 verification
 
 Date: October 4, 2026.
 
@@ -6,7 +6,7 @@ Date: October 4, 2026.
 
 ## Automated checks
 
-`node --test tests/*.test.cjs` — **59 tests pass**, 0 failed.
+`node --test tests/*.test.cjs` — **68 tests pass**, 0 failed.
 
 - Geometry: primitives, exact volume/area, positive/negative profile extrusion, checked inward solid-face edits, collapse rejection, concave profiles, oblique planes, offsets, arc/spline endpoints, straight and bent sweeps, topology diagnostics.
 - Solids: union/subtract/intersect analytical volumes; identical, touching, disjoint and contained cases; through-hole construction and closed STL round trip.
@@ -14,6 +14,7 @@ Date: October 4, 2026.
 - Controller (DOM stub): creating/editing/undo/redo, rollback, locking/grouping, duplicate, project migration, numeric drawing on a tilted plane, export/help/detail command wiring, projection and picking math.
 - Orbit regression (DOM stub): full horizontal/vertical/diagonal turns in both directions; continuous pole crossings; ten turns across successive drags; picking throughout rotation; inverted screen-space panning and saved-view restore. All four new regression tests failed against rc.1 and pass with the fix.
 - Grid occlusion: a software sampler consumes the actual WebGL draw batches and checks opaque-face coverage from above/below/side/tilted workplanes, guides in empty space/holes/wireframe, and nearer-model occlusion. The coverage regression fails on rc.2 and passes with the fix. These two checks do not execute a GPU or browser.
+- Nested sketch regions (DOM stub): border/center picking in either creation order, highlight loops and inspector hint, numeric/drag extrusion, cancel and undo/redo, JSON/STL round trips, negative extrusion on an oblique plane, multiple/deeply nested loops, circular cutouts, hidden/noncoplanar/locked profiles, cache invalidation and nonmutating rejection of touching/crossing outlines.
 - Storage (localStorage stub and IndexedDB-shaped transaction adapter): active-project save/reload/recovery; outgoing project preservation; slot switching; recoverable trash; storage failure; transaction failure; same-project cross-tab conflict; layers, annotations, views and reusable-part round trips.
 - Shipped examples: all three validate and survive project serialization.
 
@@ -44,7 +45,7 @@ Earlier browser attempts returned `ERR_BLOCKED_BY_CLIENT` for local app URLs, an
 
 1. Open a clean project. Create a rectangle with exact dimensions, extrude, resize, recolor, save and reload.
 2. Open each included example. Use view tools, selection, locks, layers, groups and undo/redo. Orbit through full horizontal and vertical turns in both directions, crossing both poles. Check pan, zoom and saved views while upside down. Verify that grids never cross opaque faces in shaded/solid mode, including from below and on face workplanes; check openings and wireframe too.
-3. Drill a bracket by subtracting cylinders; inspect and compare the STL in an independent slicer.
+3. Draw nested rectangles on the same plane. Click the border and center separately; verify the highlight. Extrude only the border by dragging and by entering a distance, then undo. Repeat with a circle and a tilted plane. Drill a bracket by subtracting cylinders; inspect and compare the STL in an independent slicer.
 4. Exercise an offset, spline, sweep and radial array; save a dimension and camera view.
 5. Create, copy, switch and trash/restore projects; export JSON; reimport and compare metadata.
 6. Import/export STL, paired OBJ/MTL and GLB; confirm dimensions, orientation and colors.
