@@ -50,19 +50,13 @@ function sketchRegion(o,fi=0){
 }
 function extrudeSketchRegion(mesh,fi,d,region=sketchRegion(mesh,fi)){
  if(region.error)throw Error(region.error);
- let solid=K.extrude(mesh,fi,d);if(!region.holes.length)return solid;
- // Carry cutters well beyond both caps to avoid nearly coincident sliver faces.
- const n=K.normal(mesh.vertices,mesh.faces[fi]),pad=Math.max(1,Math.abs(d)),sign=Math.sign(d);
- for(const hole of region.holes){
-  const profile=K.profile(hole.points.map(p=>V.add(p,V.mul(n,-sign*pad))));
-  if(V.dot(K.normal(profile.vertices,profile.faces[0]),n)<0)profile.faces[0].reverse();
-  solid=K.boolean(solid,K.extrude(profile,0,d+sign*2*pad),'subtract');
- }
+ const solid=region.holes.length?K.extrudeLoops(mesh.faces[fi].map(i=>mesh.vertices[i]),region.holes.map(h=>h.points),d):K.extrude(mesh,fi,d);
  if(doc.objects.reduce((sum,o)=>sum+o.vertices.length,0)-mesh.vertices.length+solid.vertices.length>150000)throw Error('Region extrusion would exceed the 150,000-vertex model limit.');
  return solid;
 }
 function selectedFaceLoops(o,fi){
  const outer=o.faces[fi]?.map(i=>o.vertices[i]);if(!outer)return [];
+ if(o.faces.length>1)return K.facePatch(o,fi).loops;
  const region=sketchRegion(o,fi);return [outer,...(region.error?[]:region.holes.map(h=>h.points))];
 }
 const inspectorBeforeRegions=updateInspector;

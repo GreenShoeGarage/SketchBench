@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-rc.5 — 2026-10-04
+
+Reworked extrusion and surface display after the reported broken-looking frame. Border extrusion now constructs caps and walls directly instead of repeatedly subtracting solids. Connected coplanar pieces select and push/pull as a whole face, including older boolean-generated and imported triangulated models. The new cap remains selected for continued editing. Shaded/solid modes hide internal coplanar seams. Standard views use Z up, while full orbit remains available. The software fallback now resolves triangle visibility with a per-pixel depth buffer and clips hidden edges; WebGL uses a tighter scene depth range and reduced polygon offset. Added ten targeted tests and an inspected software-renderer image. Actual browser/GPU acceptance remains outstanding.
+
 ## 1.0.0-rc.4 — 2026-10-04
 
 Added selection and extrusion of nested sketch regions. Clicking between coplanar closed outlines selects the border, while clicking the center selects the smaller profile. Selection highlighting excludes inner loops. Numeric and dragged border extrusion create a closed solid with cutouts while keeping the center profiles flat and independently editable. Touching/crossing outlines are rejected with a clear message, and failed operations preserve the sketches. Existing saved projects work without migration. Added nine regression tests; browser acceptance remains outstanding.

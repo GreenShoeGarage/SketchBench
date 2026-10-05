@@ -1,7 +1,7 @@
 {
   "app": "SKETCHBENCH",
   "schema": 2,
-  "version": "1.0.0-rc.4",
+  "version": "1.0.0-rc.5",
   "projectId": "example-13",
   "name": "Electronics enclosure",
   "units": "mm",

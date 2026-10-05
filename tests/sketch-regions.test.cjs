@@ -19,7 +19,7 @@ test('numeric border extrusion makes a closed frame and preserves the flat cente
  const e=await setup(),inner=e.run('JSON.stringify(doc.objects[1])'),before=e.run('snapshot()');
  click(e,[5,30,0]);e.run("$('#extrudeDistance').value='20';applyExtrude()");
  near(volume(e),(50*60-30*40)*20);assert.ok(e.run('K.diagnose(doc.objects[0]).closed'));
- assert.equal(e.run('JSON.stringify(doc.objects[1])'),inner);assert.equal(e.run('selectedFace'),null);
+ assert.equal(e.run('JSON.stringify(doc.objects[1])'),inner);assert.equal(e.run('K.facePatch(doc.objects[0],selectedFace.face).loops.length'),2);
  e.run('doc=validateProject(JSON.parse(snapshot()))');near(volume(e),36000);
  assert.ok(e.run('K.diagnose(K.parseSTL(new TextEncoder().encode(K.stl([doc.objects[0]])).buffer)).closed'));
  e.run('undo()');assert.equal(e.run('snapshot()'),before);e.run('undo(true)');near(volume(e),36000);

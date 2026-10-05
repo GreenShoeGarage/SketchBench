@@ -1,4 +1,4 @@
-# SKETCHBENCH 1.0.0-rc.4
+# SKETCHBENCH 1.0.0-rc.5
 
 A self-hosted, local-first 3D sketching and mesh-modeling instrument for Green Shoe Garage.
 
@@ -46,8 +46,8 @@ Open `http://localhost:8080`. Uploading the other package files is optional: all
 
 ### Shape
 
-- Flat-profile extrusion; solid-face push/pull with shared-vertex motion, collapse checks and bounded intersection checks.
-- Border extrusion by dragging or numeric distance, leaving the inner profiles flat. Supports multiple inner loops, either extrusion direction and tilted planes.
+- Flat-profile extrusion; solid-face push/pull moves an entire connected coplanar surface, with collapse checks and bounded intersection checks. Older triangulated and boolean-generated caps also act as one surface.
+- Direct border extrusion creates shared caps and walls, leaving inner profiles flat. Supports multiple inner loops, either direction and tilted planes; the resulting cap remains selected for continued pulls.
 - Box, cylinder, cone, sphere and torus primitives with numeric dimensions.
 - Union, subtraction and intersection of two closed meshes. Optional hidden source preservation and undo.
 - Selected-face offsets; splines from open-line control points; profile sweeps along open paths.
@@ -63,6 +63,7 @@ Open `http://localhost:8080`. Uploading the other package files is optional: all
 - Measurement, saved fixed-endpoint dimensions and saved camera views.
 - Unrestricted 360° horizontal and vertical orthographic orbit, including over the poles; pan/zoom, standard views, fit, shaded/solid/wireframe render modes.
 - Workplane grid and world-axis guides stay behind opaque model faces in every view; guides remain visible through holes and in wireframe.
+- Upright standard views with Z up; shaded/solid modes show surface boundaries and creases without internal triangulation seams.
 
 ### Keep and export
 
@@ -105,7 +106,7 @@ Draw one rectangle inside another on the same work plane. Choose **Push/pull**, 
 
 Inner profiles must be visible, planar, closed, fully contained, and separated from the outer boundary and other inner outlines. Nested regions use their immediate inner boundaries. Hidden profiles do not form cutouts; hide an inner profile to extrude the full outer face. Locked inner profiles can define a cutout and remain unchanged. Touching, crossing or overlapping outlines require separation or explicit solid boolean modeling.
 
-Region extrusion supports up to 16 inner outlines and 1,000 total outline vertices, subject to the existing boolean complexity limits. If geometry cannot be validated, the original sketches are preserved. Centers remain separate flat profiles; select the resulting frame when exporting only that solid to STL. Boolean-generated caps contain multiple mesh faces; there is no linked parametric extrusion history.
+Region extrusion supports up to 16 inner outlines and 1,000 total outline vertices, with bounded cap construction and mesh validation. If geometry cannot be validated, the original sketches are preserved. Centers remain separate flat profiles; select the resulting frame when exporting only that solid to STL. Click any part of a connected planar cap to pull the whole cap again. This also works on older boolean-generated and imported triangulated solids. There is no linked parametric extrusion history.
 
 ## Data and recovery
 
@@ -135,7 +136,7 @@ Saved dimensions are fixed endpoints and do not constrain or follow edited geome
 
 STL excludes colors and lines. STL/OBJ coordinates are interpreted as millimeters on import. GLB uses standard meters/Y-up interchange, converted to/from this app's millimeters/Z-up. GLB import supports embedded uncompressed triangle and independent-line geometry plus base colors and node transforms. Required extensions, compressed meshes, sparse accessors, morph targets and skinning are rejected. Textures and animation are not retained. OBJ + MTL export produces two files in one ZIP; select both OBJ and MTL through Open to import their colors. External textures are not loaded.
 
-Model mesh exports use selected visible objects if selected, otherwise all visible objects. JSON includes hidden objects and all project metadata. PNG/print use the whole visible viewport. The Canvas 2D fallback uses triangle depth sorting with limited accuracy for intersecting geometry; WebGL is preferred.
+Model mesh exports use selected visible objects if selected, otherwise all visible objects. JSON includes hidden objects and all project metadata. PNG/print use the whole visible viewport. The Canvas 2D fallback now rasterizes opaque triangles with a per-pixel depth buffer and clips hidden feature edges. It can be slower than WebGL on large models. Both renderers keep internal coplanar seams hidden in shaded/solid modes; wireframe exposes mesh edges.
 
 Limits: 25 MB imported file, 2 MB MTL, 1,000 active objects / 150,000 active vertices, 250,000 vertices including reusable parts, 100 layers, 50 reusable parts, 100 saved dimensions, 50 views, 50 copies per array action. Imported meshes: 100,000 vertices / 60,000 faces; at most 1,000 vertices per profile/face. Curves: up to 256 samples; spline control points: up to 100; sweep: up to 200 profile and 200 path points. Large operations run synchronously and may pause the interface briefly.
 
@@ -149,10 +150,13 @@ The deployable HTML is self-contained. Corresponding editable source is included
 | `kernel.js` | Base vector and mesh geometry |
 | `geometry-plus.js` | Planes, checked face edits, curves, offsets, sweeps and diagnostics |
 | `solids.js` | Bounded BSP boolean operations |
+| `surfaces.js` | Direct region extrusion, connected faces and clean feature edges |
+| `software-renderer.js` | Per-pixel depth rendering for the Canvas fallback |
 | `interchange.js` | GLB, OBJ/MTL and ZIP codecs |
 | `app.js` | Viewport, interactions and baseline controller |
 | `precision.js` | Numeric sketching and face-plane controls |
 | `sketch-regions.js` | Nested-profile selection, border highlighting and extrusion |
+| `viewport-surfaces.js` | Hidden-edge clipping, software display and camera depth range |
 | `studio.js` | Solid/detail commands, annotations and views |
 | `projects.js` | Schema migration, storage, projects, layers and reusable parts |
 | `export-ui.js`, `finish.js` | Interchange UI, printing, contextual help and geometry cache |
@@ -169,6 +173,8 @@ python3 build.py
 node --test tests/*.test.cjs
 python3 tests/independent_exports.py
 ```
+
+`verification/extrusion-software.png` captures the actual software rasterizer output for a 50 × 60 × 20 mm frame with a flat center. It is a geometry/render-output check, not a browser screenshot.
 
 No npm dependencies are needed. These packaging/testing commands are for maintainers only; hosting the supplied HTML needs no build. Keep the visible version, service-worker version and packaged HTML synchronized.
 
