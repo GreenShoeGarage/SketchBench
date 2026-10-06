@@ -1,3 +1,11 @@
+# 2.0.0-rc.2 — October 6, 2026
+
+- Bundle the deployed CAD worker and its JavaScript dependencies into `cad/worker.js`, removing the runtime requirement for `.mjs` MIME configuration.
+- Fetch and validate WASM bytes explicitly; support binary MIME responses and report missing/forbidden files, HTML fallbacks, truncated binaries, and compilation errors.
+- Preserve useful startup errors in Solid tools, reject pending operations on failure, add Retry solid engine, and bound silent initialization to 90 seconds. Ignore stale worker messages and diagnostics after a restart.
+- Update the offline manifest/cache and revalidate assets during installation. Existing projects remain untouched.
+- Add integration coverage for the shipped worker over nested HTTP paths with real WASM, plus startup failures and retry races. This is Node VM coverage, not a claim of browser acceptance.
+
 # 2.0.0-rc.1 — October 6, 2026
 
 - Added a bundled native CAD kernel, connected face drawing/cutting, native region extrusion and exact STEP interchange.

@@ -1,9 +1,54 @@
 /* Native solid integration and edge finishing. GPL-3.0-only. */
 let cadWorker=null,cadReady=false,cadFailure='',cadSequence=0,cadBusy=false,cadCommit=false,cadPreview=null,cadDrag=null,sketchHost=null;
 let edgeSelection={id:null,indices:new Set()},selectionMode='face',edgeDialogEpoch=0;const cadPending=new Map();
-function initCAD(){if(typeof Worker==='undefined')return;try{cadWorker=new Worker('./cad/worker.mjs',{type:'module'});cadWorker.onmessage=({data})=>{if(data.ready){cadReady=true;$('#kernelState').textContent='Solid engine ready';return;}if(data.fatal){cadFailure=data.fatal;$('#kernelState').textContent='Solid engine unavailable';for(const p of cadPending.values()){clearTimeout(p.timer);p.reject(Error(data.fatal));}cadPending.clear();return;}const p=cadPending.get(data.id);if(!p)return;clearTimeout(p.timer);cadPending.delete(data.id);data.error?p.reject(Error(data.error)):p.resolve(data.result);};cadWorker.onerror=e=>{cadFailure='The bundled solid engine could not load. Serve the complete folder over HTTP/HTTPS.';$('#kernelState').textContent=cadFailure;for(const p of cadPending.values()){clearTimeout(p.timer);p.reject(Error(cadFailure));}cadPending.clear();};}catch(e){cadFailure=e.message;}}
+let cadStartupTimer=null;
+function cadState(message){
+ $('#kernelState').textContent=message||cadFailure||(cadReady?'Solid engine ready':'Solid engine initializing…');
+ $('#cadRecovery').hidden=!cadFailure;
+}
+function cadFail(message){
+ clearTimeout(cadStartupTimer);cadReady=false;cadFailure=String(message);cadWorker?.terminate();
+ for(const p of cadPending.values()){clearTimeout(p.timer);p.reject(Error(cadFailure));}
+ cadPending.clear();cadState();
+}
+async function cadWorkerDiagnostic(url,detail){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+ try{
+  const response=await fetch(url,{credentials:'same-origin',cache:'no-store',signal:controller.signal});
+  const type=(response.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+  response.body?.cancel().catch(()=>{});
+  if(!response.ok)return 'Cannot load solid worker: HTTP '+response.status+' at '+url+'. Check that the file is uploaded and accessible.';
+  if(!/^(text|application)\/(x-)?(javascript|ecmascript)$/.test(type)&&!/^text\/(javascript1\.[0-5]|jscript|livescript)$/.test(type))return 'The server sends '+url+' as '+(type||'an unknown content type')+'. Serve this .js file as text/javascript or application/javascript.';
+  return 'Solid worker failed at '+url+'. '+(detail||'Check the browser console for a blocked worker or script error.');
+ }catch(e){return 'Cannot load solid worker at '+url+'. '+(detail||e.message||String(e));}
+ finally{clearTimeout(timer);}
+}
+function initCAD(){
+ clearTimeout(cadStartupTimer);cadWorker?.terminate();cadWorker=null;cadReady=false;cadFailure='';cadState();
+ if(typeof Worker==='undefined'){cadFail('This browser does not support Web Workers. Update the browser to use solid tools.');return;}
+ if(!/^https?:$/.test(location.protocol)){cadFail('Open SKETCHBENCH through an HTTP or HTTPS web server. Direct file opening cannot load the solid engine.');return;}
+ try{
+  const url=new URL('./cad/worker.js',document.baseURI).href;
+  const worker=cadWorker=new Worker(url,{type:'module'});
+  cadStartupTimer=setTimeout(()=>{if(cadWorker===worker&&!cadReady)cadFail('The solid engine did not start within 90 seconds. Check the connection, then choose Retry solid engine.');},90000);
+  worker.onmessage=({data})=>{
+   if(cadWorker!==worker||cadFailure)return;
+   if(data.status){if(!cadBusy)cadState(data.status);return;}
+   if(data.ready){clearTimeout(cadStartupTimer);cadReady=true;cadState();sync();return;}
+   if(data.fatal){cadFail(data.fatal);return;}
+   const p=cadPending.get(data.id);if(!p)return;clearTimeout(p.timer);cadPending.delete(data.id);
+   data.error?p.reject(Error(data.error)):p.resolve(data.result);
+  };
+  worker.onerror=e=>{
+   if(cadWorker!==worker)return;
+   const detail=e.message?e.message+(e.filename?' ('+e.filename+':'+e.lineno+')':''):'';
+   cadFail('Solid worker failed at '+url+'. '+(detail||'Checking the server response…'));
+   cadWorkerDiagnostic(url,detail).then(message=>{if(cadWorker===worker&&!cadReady){cadFailure=message;cadState();}});
+  };
+ }catch(e){cadFail('Cannot start the solid worker: '+(e.message||String(e)));}
+}
 function cadCall(op,args){if(!cadWorker||cadFailure)return Promise.reject(Error(cadFailure||'Solid tools require the complete hosted folder.'));return new Promise((resolve,reject)=>{const n=++cadSequence,timer=setTimeout(()=>{cadPending.delete(n);reject(Error('The geometry operation timed out. Cancel and retry with a simpler selection.'));},60000);cadPending.set(n,{resolve,reject,timer});cadWorker.postMessage({id:n,op,args});});}
-async function cadTask(label,fn){if(cadBusy){toast('Finish or cancel the current solid operation.');return;}cadBusy=true;$('#kernelState').textContent=label+'…';try{return await fn();}catch(e){toast(e.message,10000);return null;}finally{cadBusy=false;$('#kernelState').textContent=cadFailure?'Solid engine unavailable':cadReady?'Solid engine ready':'Solid engine initializing…';}}
+async function cadTask(label,fn){if(cadBusy){toast('Finish or cancel the current solid operation.');return;}cadBusy=true;cadState(label+'…');try{return await fn();}catch(e){toast(e.message,10000);return null;}finally{cadBusy=false;cadState();}}
 function cadApply(fn){cadCommit=true;try{return edit(fn);}finally{cadCommit=false;}}
 const beforeCadEdit=edit;edit=function(fn){if(cadBusy&&!cadCommit){toast('Wait for the solid operation to finish.');return false;}return beforeCadEdit(fn);};
 const beforeCadSwitch=saveBeforeSwitch;saveBeforeSwitch=async()=>{if(cadBusy||cadDrag){toast('Finish the solid operation before switching projects.');return false;}return beforeCadSwitch();};
@@ -55,6 +100,7 @@ async function exportNativeSTEP(){await cadTask('Exporting STEP',async()=>{const
 const importBeforeCAD=importFile;importFile=async function(file,mtl=''){if(/\.(step|stp)$/i.test(file?.name||'')){if(file.size>25000000)return toast('STEP limit: 25 MB.');await cadTask('Importing STEP',async()=>{const m=await cadCall('importSTEP',{text:await file.text()});cadApply(()=>addObject(file.name,m));fit();closeDialog();});return;}return importBeforeCAD(file,mtl);};$('#fileInput').accept+=',.step,.stp';
 const exportBeforeCAD=exportMenu;exportMenu=function(){exportBeforeCAD();$('#dialogBody .actionlist').insertAdjacentHTML?.('afterbegin',actionButton('step','Editable solid · STEP','One selected native solid, with curved surfaces.'));};actions.export=exportMenu;
 Object.assign(actions,{fillet:()=>edgeTool('fillet'),chamfer:()=>edgeTool('chamfer'),editEdgeTreatment:()=>edgeTool('',true),removeEdgeTreatment:()=>solidCommand('undoFeature'),convertSolid,healFaces:()=>solidCommand('heal'),step:exportNativeSTEP,selectEdges:()=>{selectionMode=selectionMode==='edge'?'face':'edge';setTool('select');$('#selectionMode').textContent=selectionMode==='edge'?'Edges':'Faces / objects';},});
+actions.retryCAD=()=>{if(cadBusy)return toast('Wait for the current operation to finish.');initCAD();};
 initCAD();
 // Preserve exact solid geometry when existing move/rotate/mirror/array tools transform meshes.
 const transformBeforeCAD=K.transform;K.transform=function(m,fn){if(!m.cad)return transformBeforeCAD(m,fn);const origin=fn([0,0,0]),columns=[0,1,2].map(i=>{const p=[0,0,0];p[i]=1;return V.sub(fn(p),origin);}),lengths=columns.map(V.len);if(Math.max(...lengths)-Math.min(...lengths)>1e-6||Math.abs(V.dot(columns[0],columns[1]))>1e-6||Math.abs(V.dot(columns[0],columns[2]))>1e-6||Math.abs(V.dot(columns[1],columns[2]))>1e-6)throw Error('Use Push/pull to resize a native solid along one axis, or Transform for uniform scaling.');const matrix=[0,1,2].flatMap(i=>[columns[0][i],columns[1][i],columns[2][i],origin[i]]);m.cad=clone(m.cad);m.cad.transforms=[...(m.cad.transforms||[]),matrix];m.cad.faces.forEach(f=>{f.center=fn(f.center);f.normal=V.unit(V.sub(fn(f.normal),origin));});if(m.cad.normals)m.cad.normals=m.cad.normals.map(ns=>ns.map(n=>V.unit(V.sub(fn(n),origin))));m.cad.edges.forEach(e=>{if(e.center)e.center=fn(e.center);if(e.normal)e.normal=V.unit(V.sub(fn(e.normal),origin));if(e.radius)e.radius*=lengths[0];e.start=fn(e.start);e.end=fn(e.end);e.mid=fn(e.mid);e.length*=lengths[0];});m.cad.volume*=lengths[0]**3;return transformBeforeCAD(m,fn);};

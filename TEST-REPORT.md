@@ -1,10 +1,10 @@
-# SKETCHBENCH 2.0.0-rc.1 verification
+# SKETCHBENCH 2.0.0-rc.2 verification
 
 October 6, 2026. **Release candidate; real-browser acceptance remains open.**
 
 ## Automated evidence
 
-**111 tests passed; zero failures.**
+**116 tests passed; zero failures.**
 
 `npm test` runs the original regression suite plus native-kernel, v2 controller, shipped-bundle and offline-manifest checks. The recorded output is in `verification/automated-tests.txt`.
 
@@ -16,6 +16,8 @@ The suite covers:
 - Controller using a DOM stub: native save/migration/undo, face-plane sketch and cut, exact rectangle/circle region extrusion, linked instance geometry/color and added/deleted members, late-preview cancellation, perspective inversion/clipping, filled sections with holes, attached dimensions, angular/leader persistence and texture payload validation.
 - Actual software rasterizer: per-pixel depth ordering, smooth vertex colors, texture samples, transparency compositing, clear/resize behavior. These produce pixel arrays, not mocked screenshots.
 - Shipped `cad/core.bundle.mjs` with shipped loader/WASM: successful primitive creation, fillet and kernel validation.
+- Shipped `cad/worker.js` evaluated in a Node VM with a browser-like global (no Node process), fetched from a nested HTTP path. Real WASM bytes served as `application/octet-stream` start successfully; profile creation, extrusion, all-edge fillet/chamfer and validity checks pass. No JavaScript dependency requests are made. HTTP 404/403, HTML fallback and truncated WASM produce specific errors. This is an HTTP/VM integration test, not a browser test.
+- Startup controller: wrong MIME and HTTP error diagnostics, timeout, pending-operation rejection, unsupported browser, direct-file rejection, and retry/stale-response races.
 - Service-worker manifest: worker/bundle/WASM/font paths exist and the handler ignores an unrelated application's URL. This is a source/manifest check, not an actual offline browser test.
 
 The DOM harness does not implement browser layout, WebGL, real pointer capture, native IndexedDB, service-worker installation, file dialogs or printing. Storage tests use localStorage and IndexedDB-shaped adapters. Touch gestures, scene animation timing, accessible focus, imported texture decoding and the actual Web Worker startup require browser acceptance.
@@ -40,13 +42,15 @@ The three STEP files were imported with CadQuery/Python OCCT, a separate reader/
 
 - All runtime files are local and referenced by relative paths.
 - The complete static folder and editable source are included; no `node_modules` or application server is required for runtime.
-- App version, HTML branding, package metadata and worker cache version identify `2.0.0-rc.1`.
+- App version, HTML branding, package metadata and worker cache version identify `2.0.0-rc.2`.
 - Pinned JS dependencies, vendor licenses, CAD source archives and SHA-256 provenance manifest are included.
 - `PACKAGE-CHECKSUMS.sha256` records the packaged files. The ZIP is checked for archive integrity and required runtime entries before delivery.
 
 ## Unpassed release gate
 
-The available browser environment rejects the local app route. No alternative browser/control path was used to bypass that restriction.
+The hosted rc.1 page at `https://mbparks.com/sketchbench/` was reachable in the browser and reproduced the generic solid-engine failure reported by the user. The old handler discards the underlying Worker error. Direct asset requests were blocked (Cloudflare HTTP 403 / code 1010), and browser navigation to the old worker returned `ERR_BLOCKED_BY_CLIENT`; these observations do not establish the original failure cause in the user’s browser. No workaround was used to bypass those restrictions.
+
+rc.2 removes the `.mjs` hosting dependency, makes binary MIME handling tolerant, and exposes the actual startup failure. It has not been deployed to that host, so successful startup there remains unverified. Previous local-browser restrictions also remain; no browser/GPU/offline acceptance pass is claimed.
 
 A stable v2.0 release still requires a reachable app installation for:
 

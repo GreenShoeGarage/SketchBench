@@ -1,6 +1,6 @@
 # SKETCHBENCH v2 roadmap and release status
 
-October 6, 2026 · **2.0.0-rc.1**
+October 6, 2026 · **2.0.0-rc.2**
 
 The user authorized development through v2.0 without intermediate batch approvals. Fillets and chamfers are required features. They are implemented with a native CAD kernel and included in this candidate.
 
@@ -26,7 +26,7 @@ The user authorized development through v2.0 without intermediate batch approval
 5. First install and offline reload under a nested HTTPS route, including the worker, WASM, font and an app upgrade.
 6. Browser file pickers/downloads, screenshots and print/PDF output; independent viewer/slicer inspection.
 
-The available browser environment blocks the local application route. No browser screenshot, GPU, touch, native browser-storage or offline-load pass is claimed. This is why the deliverable is **rc.1**, rather than a stable v2.0 label.
+The hosted rc.1 startup failure was reproduced. rc.2 bundles a single `.js` worker and adds explicit WASM validation and recovery diagnostics; its HTTP/VM tests pass. Upload and browser acceptance of rc.2 are still required. No GPU, touch, native browser-storage or offline-load pass is claimed. The deliverable remains **rc.2**, pending that acceptance.
 
 ## Broader gaps that remain outside this candidate
 

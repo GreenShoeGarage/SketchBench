@@ -1,4 +1,4 @@
-# SKETCHBENCH 2.0.0-rc.1
+# SKETCHBENCH 2.0.0-rc.2
 
 Self-hosted, local-first 3D modeling for Green Shoe Garage. No accounts, AI, telemetry, cloud modeling service, API keys, or runtime CDN dependencies.
 
@@ -20,16 +20,30 @@ Open `http://localhost:8080/`. A hosted subdirectory such as `/tools/sketchbench
 ```text
 index.html
 sw.js
-cad/worker.mjs
-cad/core.bundle.mjs
-vendor/occt.js
+cad/worker.js
 vendor/replicad_single.wasm
 vendor/DejaVuSans.ttf
 ```
 
-Serve `.mjs` and `.js` as JavaScript and `.wasm` as `application/wasm`. HTTPS or localhost enables the service worker. Direct `file://` opening is unsupported for the solid engine. The single-threaded engine does not need cross-origin isolation headers.
+Serve `.js` as `text/javascript` or `application/javascript`. The runtime no longer loads any `.mjs` files: the solid worker and its JavaScript dependencies are bundled into `cad/worker.js`. Serve `.wasm` as `application/wasm` when possible; `application/octet-stream` also works because the loader instantiates the downloaded bytes. HTTPS or localhost enables the service worker. Direct `file://` opening is unsupported for the solid engine. The single-threaded engine does not need cross-origin isolation headers.
 
-The service worker installs a complete version of the runtime, including the solid engine and font, for subsequent offline loads. Initial installation needs the hosted files to be available. It only handles the listed assets in this installation's directory. An updated worker waits for previous app tabs to close before taking over. Close all tabs for this installation and reopen after uploading an update. A failed asset download keeps the previous worker in place.
+The service worker installs a complete version of the runtime, including the solid engine and font, for subsequent offline loads. Initial installation needs the hosted files to be available. It only handles the listed assets in this installation's directory. Installation revalidates assets rather than reusing the HTTP cache. An updated worker waits for previous app tabs to close before taking over. After uploading an update, reload once to discover it, allow the engine file to download, then close all tabs for this installation and reopen. A failed asset download keeps the previous worker in place. The header must show **v2.0.0-rc.2** after this update. Do not clear site data to update: it contains locally saved projects.
+
+### Updating an existing v2.0.0-rc.1 installation
+
+Replace `index.html` and `sw.js`, and upload the new `cad/worker.js` beside the existing `vendor/replicad_single.wasm` and `vendor/DejaVuSans.ttf`. Keep the directory layout: for `/sketchbench/`, the worker belongs at `/sketchbench/cad/worker.js`. The old `.mjs` files and `vendor/occt.js` can remain; the new runtime does not request them. They are retained in the full source package for development and tests.
+
+### If the solid engine cannot start
+
+HTTPS alone does not guarantee that a worker or its WebAssembly file is available. The Solid tools status now reports the failing asset URL, HTTP status, incorrect JavaScript content type, invalid binary response, or initialization error. It preserves the error after a drawing attempt and offers **Retry solid engine** without changing the model.
+
+- HTTP 404: upload the named file at the reported path.
+- HTTP 401/403: inspect the site's access rules for that specific static asset. A browser challenge or HTML login page is not a usable worker or WASM response.
+- Worker delivered as HTML or a binary content type: correct the `.js` MIME mapping and any HTML fallback/rewrite affecting `cad/worker.js`.
+- Invalid WASM response: verify `vendor/replicad_single.wasm` was uploaded as a binary file, without truncation or replacement by an HTML page.
+- Compilation failure: retain the exact error shown and check browser WebAssembly support; the underlying message is no longer replaced by generic HTTP/HTTPS advice.
+
+Correct the affected asset or server configuration, then choose **Retry solid engine**. If the page still shows rc.1, complete the update/reopen steps above first.
 
 Source files, tests, examples, licenses and upstream source archives are included. They do not need to be publicly hosted. The compressed package is larger because it contains the upstream CAD source archives as well as the ready-to-run app.
 

@@ -1,7 +1,7 @@
 /* SKETCHBENCH 0.1.0 — Copyright 2026 Green Shoe Garage. GPL-3.0-only. */
 'use strict';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],{V}=K;
-const VERSION='2.0.0-rc.1',KEY='sketchbench-v1:'+((location.pathname||'/').replace(/[^/]*$/,'')),id=()=>crypto.randomUUID?crypto.randomUUID():'o'+Date.now()+Math.random().toString(16).slice(2),clone=x=>JSON.parse(JSON.stringify(x)),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const VERSION='2.0.0-rc.2',KEY='sketchbench-v1:'+((location.pathname||'/').replace(/[^/]*$/,'')),id=()=>crypto.randomUUID?crypto.randomUUID():'o'+Date.now()+Math.random().toString(16).slice(2),clone=x=>JSON.parse(JSON.stringify(x)),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let doc={app:'SKETCHBENCH',schema:1,version:VERSION,name:'Untitled model',units:'mm',objects:[]},selected=new Set(),selectedFace=null,tool='select',points=[],hover=null,gesture=null,history=[],future=[],dirty=false,db=null,saveTimer,saveQueue=Promise.resolve(),savedSnapshot=null,conflict=false;
 let prefs={theme:'light',advanced:false,plane:'xy',elevation:0,grid:10,snap:true,color:'#70b69b',panel:innerWidth>760},camera={az:Math.PI-.75,el:.6,scale:2.8,target:[0,0,0]},renderMode='shaded',measure=null;
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(KEY+'-prefs')||localStorage.getItem('sketchbench-v1-prefs')||'{}'));}catch{}
