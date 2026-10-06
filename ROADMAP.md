@@ -1,36 +1,35 @@
-# SKETCHBENCH release status and roadmap
+# SKETCHBENCH v2 roadmap and release status
 
-Current deliverable: **1.0.0-rc.5**, dated October 4, 2026.
+October 6, 2026 · **2.0.0-rc.1**
 
-The user authorized development in batches through v1.0 without intermediate permission requests. All scheduled implementation batches were completed; the stable release gate remains open because the browser environment blocks local application URLs. An RC identifies this limitation honestly.
+The user authorized development through v2.0 without intermediate batch approvals. Fillets and chamfers are required features. They are implemented with a native CAD kernel and included in this candidate.
 
-| Batch | Implemented | Verification |
+| Batch | Result in this candidate | Evidence / boundary |
 | --- | --- | --- |
-| v0.1 | Core profiles, primitives, viewport, transforms, project interchange and exports | Original geometry/controller suite |
-| v0.2 | Numeric sketching, face-aligned planes, direction constraints, vertex editing, safer inward face edits | Exact oblique-plane rectangle/extrusion, frame inversion and collapse rejection |
-| v0.3 | Union, subtract, intersect, bounded solid checks, diagnostics and explicit repair commands | Analytical box volumes, containment, disjoint/touching/identical cases, round through-hole and STL topology |
-| v0.4 | Arcs, ellipses, splines, offsets, sweeps, radial arrays, mirror planes, dimensions and views | Curve endpoints, offset rejection, straight/bent sweep topology and schema round trips |
-| v0.5 | Local projects, thumbnails, copies, trash, layer locking/visibility, reusable parts, OBJ/MTL and GLB | Project switching/failure/recovery, migration, colored interchange and independent export checks |
-| v1.0 RC | Three representative examples, geometry cache, source/docs/package consistency and release checks | Automated tests and independent Python checks; real-browser acceptance outstanding |
+| 1.1 · CAD foundation | Bundled Replicad/OpenCascade WASM worker, BREP plus display mesh, kernel validation, cancellation | Real kernel tests and shipped-bundle execution; no remote runtime dependency |
+| 1.2 · Connected solids | Face drawing/division, native region extrusion, cuts/openings, coplanar merge, migration and mesh conversion | Controller-level through-cut and nested analytic-hole tests |
+| 1.3 · Chamfers | Equal, two distances, distance + angle; selected/all/chain edges; preview/apply/cancel; editable last operation | All three modes, circular bore and invalid-input preservation |
+| 1.4 · Fillets | Constant and start/end variable radius, internal/external corners, multi-edge rounds | Rounded block, thin enclosure, variable-radius edit, translated-history regression |
+| 1.5 · Modeling | Booleans/trim, split plane, offsets, hollow sweeps, planar resize, repeat/to-face push/pull | Native volume/validity tests and exported solids |
+| 1.6 · Precision | Unit fractions, guides/inference, extra sketch gestures, transforms/pivots, selection and mesh stretching | Controller/geometry tests; no parametric solver or arbitrary native vertex deformation |
+| 1.7 · Assemblies | Group hierarchy/context, linked definitions, copy identity, propagation and Make Unique | Translated-instance geometry, color, member addition/deletion tests |
+| 1.8 · Presentation | Materials/textures/opacity, smooth display, camera modes/walk, pinch, scenes/transitions, simple shadows | Projection and software pixel checks; GPU/touch/interaction acceptance pending |
+| 1.9 · Documentation | Section/fill/SVG, attached bounds dimensions, angular/leader/fixed dimensions, native 3D text, STEP | Section-hole, dimension persistence, native text and STEP readback |
+| 2.0 · Integration | Scoped offline assets, full source package, examples, updated help/docs and format limits | Automated suite and export readback pass; stable release gate remains open |
 
-## Stable v1.0 gate — still required
+## Remaining stable-v2.0 gate
 
-1. Real browser create → edit → save → reload → reopen → import/export sessions.
-2. Actual WebGL and software-fallback display; screenshots at desktop, tablet and phone sizes.
-3. Pointer, pen/touch, keyboard, themes and inspector usability.
-4. Actual IndexedDB persistence, browser storage denial and cross-tab behavior.
-5. Service-worker installation and offline reload at a nested HTTPS route.
-6. File picking/downloading, paired OBJ/MTL import, PNG pixels and print/PDF output.
-7. Open exported bracket, enclosure and furniture models in an independent viewer/slicer.
+1. Real desktop-browser model sessions: rectangle → extrusion → face cut → fillet/chamfer preview/cancel/apply/edit → save/reload → export.
+2. WebGL and Canvas display on desktop/tablet/phone; pole-crossing orbit, grid occlusion, smooth seams, textures/transparency and sections.
+3. Mouse, keyboard, pen and touch operation, dialog focus, small-screen layout, and screen-reader labeling.
+4. Real IndexedDB, storage denial/quota exhaustion and multiple-tab conflict behavior.
+5. First install and offline reload under a nested HTTPS route, including the worker, WASM, font and an app upgrade.
+6. Browser file pickers/downloads, screenshots and print/PDF output; independent viewer/slicer inspection.
 
-Automated controller tests and an IndexedDB-shaped adapter are not substitutes for these checks. No stable-v1.0 claim is made until this gate passes.
+The available browser environment blocks the local application route. No browser screenshot, GPU, touch, native browser-storage or offline-load pass is claimed. This is why the deliverable is **rc.1**, rather than a stable v2.0 label.
 
-## Deliberately deferred
+## Broader gaps that remain outside this candidate
 
-- Fillets/chamfers: evaluated and deferred because the current mesh kernel cannot guarantee robust general edge treatment. There is no placeholder control.
-- Parametric constraints/history, advanced vertex/edge topology tools and native OpenSketch/SketchUp/STEP compatibility.
-- Freehand sketching, extruded text and capsule primitives.
-- Linked component instances, broader GLB features, perspective camera and touch pinch gestures.
-- Complex offset/sweep repair and a more comprehensive intersection/manufacturability analyzer.
+Native SKP/OpenSketch/DWG/DXF compatibility; a full parametric constraint solver and feature tree; LayOut-style multi-page drawings; physical/geographic lighting and advanced rendering; UV unwrap and fully textured interchange; extension/warehouse ecosystems; multi-user collaboration; unrestricted native vertex deformation and difficult imported-shape repair.
 
-AI chat, agents, API keys, prompt-generated geometry, account profiles, cloud collaboration and telemetry remain excluded. The next work should close release blockers before expanding the feature set.
+These are explicit remaining gaps, not hidden placeholders. The app remains self-hosted and local-first. AI, prompts, API keys, analytics and cloud account features remain excluded.

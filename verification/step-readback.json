@@ -1,0 +1,23 @@
+[
+  {
+    "file": "rounded-block.step",
+    "reader": "CadQuery / Python OCCT (separate from browser JS build)",
+    "valid": true,
+    "volume_mm3": 70300.22371359481,
+    "expected_mm3": 70300.2237135946
+  },
+  {
+    "file": "chamfered-bore.step",
+    "reader": "CadQuery / Python OCCT (separate from browser JS build)",
+    "valid": true,
+    "volume_mm3": 38081.64856281002,
+    "expected_mm3": 38081.64856281013
+  },
+  {
+    "file": "filleted-enclosure.step",
+    "reader": "CadQuery / Python OCCT (separate from browser JS build)",
+    "valid": true,
+    "volume_mm3": 36097.6991118431,
+    "expected_mm3": 36097.69911184309
+  }
+]

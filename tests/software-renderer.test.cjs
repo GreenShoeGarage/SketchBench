@@ -12,3 +12,8 @@ test('software pixels respect screen scaling and clear old geometry when the sce
  assert.equal(K.rasterTriangles([],12,12,2,frame),frame);assert.deepEqual(pixel(frame,3,3),[0,0,0,0]);assert.equal(frame.depth[3*12+3],-Infinity);
  const resized=K.rasterTriangles([triangle],6,6,1,frame);assert.notEqual(resized,frame);assert.equal(resized.pixels.length,144);assert.deepEqual(pixel(resized,1,1),[51,102,153,255]);
 });
+test('textures, smooth colors and transparency composite without order dependence',()=>{
+ const shape={ps:[[0,0,3],[10,0,3],[0,10,3]],color:[1,1,1]},texture={...shape,uv:[[0,0],[0,0],[0,0]],texture:{width:1,height:1,data:new Uint8Array([20,150,70,255])}};assert.deepEqual(pixel(K.rasterTriangles([texture],10,10),2,2),[20,150,70,255]);
+ const smooth={...shape,vertexColors:[[1,0,0],[0,1,0],[0,0,1]]};const p=pixel(K.rasterTriangles([smooth],10,10),2,2);assert.ok(p[0]>100&&p[1]>50&&p[2]>50);
+ const glass={...shape,color:[1,0,0],opacity:.5},behind={...shape,ps:shape.ps.map(p=>[p[0],p[1],1]),color:[0,0,1]};for(const ts of [[glass,behind],[behind,glass]])assert.deepEqual(pixel(K.rasterTriangles(ts,10,10),2,2),[128,0,128,255]);
+});

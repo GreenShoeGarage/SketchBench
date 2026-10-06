@@ -1,3 +1,15 @@
+# 2.0.0-rc.1 — October 6, 2026
+
+- Added a bundled native CAD kernel, connected face drawing/cutting, native region extrusion and exact STEP interchange.
+- Added mandatory fillets (constant/variable) and chamfers (equal/two-distance/angle), preview/cancel, tangent chains and last-treatment editing.
+- Added linked components, more precision/sketch/selection tools, materials/textures, perspective/walk, scenes/transitions, sections, attached dimensions and native 3D text.
+- Preserved the unrestricted orbit, grid occlusion and nested-region fixes; retained old mesh project migration and recovery paths.
+- Added native example projects, closed-mesh export verification and STEP readback; bundled dependency sources/notices.
+- Changed deployment: the complete runtime folder is required. `index.html` alone no longer provides the solid tools.
+- Kept release-candidate status: actual browser, GPU, touch, offline storage/load and print acceptance remain open.
+
+---
+
 # Changelog
 
 ## 1.0.0-rc.5 — 2026-10-04

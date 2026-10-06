@@ -13,7 +13,7 @@ function renderSoftwareModel(){
 function sceneDepth(back){let depth=10;for(const o of doc.objects)if(objectVisible(o))for(const p of o.vertices)depth=Math.max(depth,Math.abs(V.dot(V.sub(p,camera.target),back)));return depth*1.1;}
 function visibleEdgeParts(edge,triangles){
  const a=edge.a,b=edge.b,hidden=[];
- for(const t of triangles){
+ for(const t of triangles){if(t.shadow||(t.opacity??1)<.99)continue;
   const [p,q,r]=t.ps;
   if(Math.max(a[0],b[0])<Math.min(p[0],q[0],r[0])||Math.min(a[0],b[0])>Math.max(p[0],q[0],r[0])||Math.max(a[1],b[1])<Math.min(p[1],q[1],r[1])||Math.min(a[1],b[1])>Math.max(p[1],q[1],r[1]))continue;
   const den=(q[1]-r[1])*(p[0]-r[0])+(r[0]-q[0])*(p[1]-r[1]);if(Math.abs(den)<1e-9)continue;

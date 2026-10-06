@@ -1,185 +1,123 @@
-# SKETCHBENCH 1.0.0-rc.5
+# SKETCHBENCH 2.0.0-rc.1
 
-A self-hosted, local-first 3D sketching and mesh-modeling instrument for Green Shoe Garage.
+Self-hosted, local-first 3D modeling for Green Shoe Garage. No accounts, AI, telemetry, cloud modeling service, API keys, or runtime CDN dependencies.
 
-**SKETCH → SHAPE → ARRANGE → EXPORT**
+**This is the v2.0 release candidate.** Automated geometry, controller, export and software-rendering checks pass. Actual browser/GPU, touch, browser storage, offline reload and print acceptance are outstanding; see `TEST-REPORT.md`. This package is an independent implementation, not an OpenSketch fork or a claim of complete SketchUp parity.
 
-This release candidate implements the planned precision, solid-operation, curve, organization, and interchange batches. **Stable v1.0 is pending real-browser acceptance.** The available cloud browser blocks local application URLs; no browser/GPU/touch/offline/print acceptance is claimed. Geometry, controller, storage-adapter and independent export checks are documented in `TEST-REPORT.md`.
+## Install
 
-Independent implementation inspired by the non-AI modeling workflow at https://opensketch.app/. It is not an OpenSketch fork, is not affiliated with OpenSketch, and does not reproduce every reference feature. No OpenSketch source or assets are included. No AI features are included or planned.
-
-## Run or deploy
-
-**Only `index.html` is required.** Open it directly in a modern browser, or upload it into any static-server directory, for example `/sketchbench/index.html`. No runtime installation, build, npm, account, database server, API key, or backend is required.
-
-For hosted offline reload, put **`sw.js` beside `index.html`** and use HTTPS. Visit once online to install the app cache. The service worker caches only this app's HTML, scoped to its own directory. Browser security disables service workers on ordinary HTTP except localhost. Directly opening the downloaded HTML works without a service worker; browser-local storage behavior for `file://` varies, so export JSON backups.
-
-Local HTTP use:
+Extract the ZIP. Serve the `sketchbench/` directory with a static HTTP server or upload it to a static HTTPS host. No application backend or runtime package installation is needed.
 
 ```sh
+cd sketchbench
 python3 -m http.server 8080
 ```
 
-Open `http://localhost:8080`. Uploading the other package files is optional: all runtime code and example models are embedded in the supplied HTML. Subdirectory paths are relative.
+Open `http://localhost:8080/`. A hosted subdirectory such as `/tools/sketchbench/` also works: runtime paths are relative.
 
-## Your first model
+**v2 requires more than the HTML file.** Keep these runtime files together:
 
-1. Choose **Rectangle** and click two corners, or type `80, 40` in the bottom Dimensions field and press Enter.
-2. Choose **3D**. The new face is selected; drag with **Push/pull**, or enter a millimeter distance in the inspector and Apply.
-3. **Select** a face or object to edit its position, dimensions, material, or name.
-4. Shift-select two closed solids and choose **Combine solids**. Use subtraction for holes, union for assemblies that should become one shell, or intersection for shared volume.
-5. Choose **Inspect** to check topology, then **Export → Editable project** for a backup. Use STL, OBJ + MTL, or GLB for interchange.
+```text
+index.html
+sw.js
+cad/worker.mjs
+cad/core.bundle.mjs
+vendor/occt.js
+vendor/replicad_single.wasm
+vendor/DejaVuSans.ttf
+```
 
-**File → Example models** opens a drilled L-bracket, an electronics enclosure with a cable port and separate lid, or an editable furniture assembly. Each opens as a new local project after saving the current one. These files are also in `examples/` as JSON, STL and GLB.
+Serve `.mjs` and `.js` as JavaScript and `.wasm` as `application/wasm`. HTTPS or localhost enables the service worker. Direct `file://` opening is unsupported for the solid engine. The single-threaded engine does not need cross-origin isolation headers.
 
-## Implemented capabilities
+The service worker installs a complete version of the runtime, including the solid engine and font, for subsequent offline loads. Initial installation needs the hosted files to be available. It only handles the listed assets in this installation's directory. An updated worker waits for previous app tabs to close before taking over. Close all tabs for this installation and reopen after uploading an update. A failed asset download keeps the previous worker in place.
 
-### Sketch
+Source files, tests, examples, licenses and upstream source archives are included. They do not need to be publicly hosted. The compressed package is larger because it contains the upstream CAD source archives as well as the ready-to-run app.
 
-- Rectangle, circle, polygon profile and connected line drawing.
-- Numeric drawing input: rectangle `width, depth`; circle `radius`; line/profile segment `length, angle`; push/pull `distance`.
-- Numeric arc, ellipse and regular polygon creation through **Sketch by dimensions**.
-- XY, XZ, YZ and selected-face work planes; elevation; plane-facing view.
-- Grid and vertex snapping, U/V direction constraints and Shift direction locking.
-- Advanced mesh vertex coordinates.
-- Nested coplanar closed profiles: select the border independently from its center; the selection highlight excludes the inner outlines.
+## First model
 
-### Shape
+1. Choose **Rectangle**, draw two corners, or enter `80, 60` in the bottom dimensions field. Choose **Push/pull**, drag the face, or enter `30` and Apply.
+2. Draw another rectangle or circle directly on a planar native face. It divides that solid's face. Click the new region and pull inward to recess it or through the body to make an opening.
+3. To extrude a frame, draw nested closed profiles on the same plane and select the region between them. The center profile stays flat. Circles retain analytic circular holes in new native profiles.
+4. Switch **Faces / objects** to **Edges**. Click an edge; Shift-click adds edges. Open **Fillet** or **Chamfer**, set dimensions, Preview, and Apply.
+5. Export a JSON project backup for further editing. Use STEP for one selected native solid or STL for a triangulated printing mesh.
 
-- Flat-profile extrusion; solid-face push/pull moves an entire connected coplanar surface, with collapse checks and bounded intersection checks. Older triangulated and boolean-generated caps also act as one surface.
-- Direct border extrusion creates shared caps and walls, leaving inner profiles flat. Supports multiple inner loops, either direction and tilted planes; the resulting cap remains selected for continued pulls.
-- Box, cylinder, cone, sphere and torus primitives with numeric dimensions.
-- Union, subtraction and intersection of two closed meshes. Optional hidden source preservation and undo.
-- Selected-face offsets; splines from open-line control points; profile sweeps along open paths.
-- Inspection for open edges, over-shared edges, inconsistent winding, degenerate/nonplanar faces, disconnected shells and supported triangle crossings.
-- Explicit vertex welding, face triangulation and normal reversal. Repair commands are undoable; they do not invent missing surfaces.
+**File → Example models** includes a rounded block, a chamfered bore, and an enclosure with inner and outer corner fillets. Their JSON, STEP, STL and GLB files are also in `examples/`. Earlier mesh examples remain available.
 
-### Arrange
+## Solid modeling
 
-- Object/face selection, Shift multi-selection, numeric dimensions and position, drag move, rotation, colors and editable names.
-- Duplicate, internal copy/paste, grouping, linear and radial arrays, and mirror copies across XY/XZ/YZ planes.
-- Searchable object list with visibility and locking; layers with group visibility/locking.
-- Reusable parts containing one or more objects. Insertions are independent copies, centered at the current camera target.
-- Measurement, saved fixed-endpoint dimensions and saved camera views.
-- Unrestricted 360° horizontal and vertical orthographic orbit, including over the poles; pan/zoom, standard views, fit, shaded/solid/wireframe render modes.
-- Workplane grid and world-axis guides stay behind opaque model faces in every view; guides remain visible through holes and in wireframe.
-- Upright standard views with Z up; shaded/solid modes show surface boundaries and creases without internal triangulation seams.
+- Native box, cylinder, sphere, cone, torus and open enclosure primitives.
+- Connected planar face division with closed outlines or crossing lines; coplanar face merge.
+- Positive and negative push/pull, openings, repeat distance, and push/pull to a parallel target plane.
+- Planar face offset, profile sweeps including holes, solid union/subtraction/intersection/trim, and splitting by the work plane.
+- Constant-radius and start/end variable-radius fillets. Equal-distance, two-distance, and distance-plus-angle chamfers. Explicit edge selection, all edges and tangent-chain expansion.
+- Preview/apply/cancel with kernel validation. Invalid geometry leaves the original model unchanged. Cancel calculation restarts the worker if a computation is taking too long.
+- Edit/remove the last edge treatment. Its original edge selection is retained. This is one editable treatment, not a complete parametric feature tree; another geometry operation replaces that history. Session undo remains available.
+- Rigid moves, rotation, reflection and uniform scaling preserve native solids. Native width/depth/height edits extend an available planar end face; arbitrary nonuniform deformation is rejected.
+- Closed mesh conversion, bounded to 5,000 faces. Conversion makes a faceted solid; it cannot reconstruct analytic cylinders or the original design intent from arbitrary tessellation.
+- STEP import/export retains CAD surfaces. JSON stores native BREP geometry plus a display mesh and project metadata.
 
-### Keep and export
+A fillet cannot succeed at every requested radius or across every topology. If a treatment intersects itself or removes a thin wall, reduce the radius or change the edge selection. Larger/complex CAD jobs can exceed the worker's time limit; the UI preserves the source.
 
-- Multiple local project slots with thumbnails, copies and recoverable trash.
-- Autosave status, previous-save recovery, per-project storage records and schema 1 migration.
-- JSON project backups include geometry, colors, layers, dimensions, views and reusable parts.
-- ASCII/binary STL import and ASCII STL export.
-- OBJ import, including paired MTL color import through the file picker; OBJ + MTL ZIP export.
-- Static GLB 2.0 geometry/color import and export, including node transforms and independent line primitives.
-- PNG export, including saved dimensions, and a printable model sheet with object sizes and a dimension table.
-- Easy/Advanced mode, light/dark/high-contrast themes, collapsible inspector, responsive CSS, shortcuts and context-menu alternatives.
+## Sketching and assembly
 
-## Controls
+- Rectangle, rotated rectangle, circle, closed profiles, lines, freehand and three-point arcs; numeric arcs, ellipses, polygons; polyline spline smoothing.
+- XY/XZ/YZ and selected-face work planes; elevation; face view; Shift/U/V direction locks.
+- Endpoint, midpoint, center, on-edge, local line-intersection, parallel/perpendicular, guide and circle-tangent inference. Snapping is tolerance based, not a constraint solver.
+- Unit-aware bottom-field lengths, guides and transforms, including `2in`, `.5in`, `1 1/2in`, and `3ft 2in`. Separate dimensions with commas. Storage uses millimeters; fields labeled mm continue to use mm.
+- Numeric transforms with a custom pivot and copy option; move/rotate/uniform-scale handles; mirror, linear/radial arrays, duplicate and internal copy/paste.
+- Object/face/edge selection, object bounding-box window/crossing selection, hide/isolate/show, and mesh vertex selection/stretching. Native vertex deformation uses face tools rather than arbitrary mesh edits.
+- Groups with parent hierarchy and an outliner; group editing context; layer visibility and locks.
+- Linked component definitions and instances. Open an instance to edit its definition: geometry, color, additions and deletions propagate to other instances in their own placements. Make Unique separates an instance. Close exits the editing context. Independent reusable parts remain available for older workflows.
 
-| Action | Control |
-| --- | --- |
-| Select | V |
-| Rectangle / Circle / Profile / Line | R / C / G / L |
-| Push/pull / Move | P / M |
-| Orbit / Pan / Measure | O / H / T |
-| Fit visible model | F |
-| Finish line/profile | Enter or double-click |
-| Apply numeric sketch dimensions | Enter in Dimensions field |
-| Cancel operation / Select | Escape |
-| Undo / Redo | Ctrl/Command Z / Ctrl/Command Shift Z |
-| Duplicate / JSON backup | Ctrl/Command D / Ctrl/Command S |
-| Select all / internal copy / paste | Ctrl/Command A / C / V |
-| Delete unlocked selection | Delete / Backspace |
-| Nudge X/Y | Arrow keys; Shift uses grid spacing |
-| Orbit | Right/middle-drag, Alt-drag, or Orbit tool |
-| Pan | Space-drag, Shift + right/middle-drag, or Pan tool |
-| Zoom | Wheel or + / − controls |
-| Context actions | Right-click or Shift F10; inspector alternatives available |
+## Views and documents
 
-On touchscreens use explicit Orbit/Pan tools and zoom controls; pinch is not implemented. The inspector overlays the viewport on narrow screens. Pointer drawing is not fully accessible to nonvisual users; numeric solid/sketch creation and object-list editing provide keyboard paths. Mobile and assistive-technology behavior still need browser acceptance.
-
-## Extrude a rectangular frame
-
-Draw one rectangle inside another on the same work plane. Choose **Push/pull**, then click the area **between the outlines**. Only the border is highlighted; the inspector says **Border region**. Drag it or enter a distance and press Apply. The inner rectangle stays flat and can be selected and extruded separately by clicking its center. Existing saved sketches gain this behavior automatically.
-
-Inner profiles must be visible, planar, closed, fully contained, and separated from the outer boundary and other inner outlines. Nested regions use their immediate inner boundaries. Hidden profiles do not form cutouts; hide an inner profile to extrude the full outer face. Locked inner profiles can define a cutout and remain unchanged. Touching, crossing or overlapping outlines require separation or explicit solid boolean modeling.
-
-Region extrusion supports up to 16 inner outlines and 1,000 total outline vertices, with bounded cap construction and mesh validation. If geometry cannot be validated, the original sketches are preserved. Centers remain separate flat profiles; select the resulting frame when exporting only that solid to STL. Click any part of a connected planar cap to pull the whole cap again. This also works on older boolean-generated and imported triangulated solids. There is no linked parametric extrusion history.
+- Full horizontal and vertical orbit, including over poles; pan/zoom; orthographic, perspective and two-point perspective; walk controls.
+- Two-finger pan/pinch zoom and explicit Orbit/Pan tools. Touch behavior still requires device acceptance.
+- Shaded, solid, wireframe and X-ray; smooth curved surfaces and softened tangent seams; simple directional ground shadows. Shadows are a display aid, not a geographic solar study.
+- Per-object/per-face materials, opacity and local PNG/JPEG/WebP textures with planar tiling, rotation and offsets. Textures are embedded in project JSON. The transparent renderer uses approximate weighted blending.
+- Scenes store camera, object/layer visibility, display style, material-independent theme and section state. Restore, update, delete and play transitions. Pointer navigation or Escape stops playback.
+- Axis-aligned section clipping, filled closed section regions, and SVG section outlines in millimeters. Sections affect views and printed images; solid exports keep the whole body.
+- Attached object width/depth/height dimensions update with object bounds and report missing objects. Linear measurements, radii, angular dimensions and leaders use fixed points. Dimensions do not constrain geometry.
+- Offline 3D text with a bundled font. Move the text then union/subtract it for raised/recessed lettering.
+- PNG viewport output and printable model sheets.
 
 ## Data and recovery
 
-- Everything stays in your browser, scoped by origin and application directory. Separate installation directories use separate stores.
-- IndexedDB is the preferred backend; localStorage is a fallback with a much smaller quota. Browser storage is not a backup.
-- New/open project operations save the outgoing project first. If saving fails or another tab has changed the active project, switching is blocked and export remains available.
-- Each project retains the prior committed save. **File → Restore previous save** restores it with an undo path.
-- Trash is recoverable. This build has no permanent-delete control. Open another project before moving the active one to trash.
-- Schema 1 JSON files migrate to schema 2. On first run at a new scoped store, the old `sketchbench-v1` active model is copied when available; the old store is preserved.
-- Autosave does not overwrite imported disk files or write to your server. Export explicitly to save disk backups.
-- Another tab saving the same active project pauses autosave here. This is conflict notification, not a simultaneous-edit merge system.
-- Undo is session-only, limited to 50 steps and approximately 20 MB of snapshots. Camera state is saved only through Saved views. Preferences are separate from project data.
-- Imports are validated before applying them. Invalid files preserve the active project. No imported scripts or external resources are executed/fetched.
-- No telemetry, analytics, remote fonts, CDN code, cloud AI or account authentication.
+Autosave is browser-local, scoped to the installation's origin and directory. Export JSON backups: browser storage is not a disk or server backup.
 
-## Geometry and format boundaries
+Projects offers multiple local slots, copies, recoverable trash and a previous committed save. Outgoing projects are saved before switching; storage failures or cross-tab conflicts pause switching. IndexedDB is preferred, with a smaller localStorage fallback. Undo/redo is session-only, bounded by 50 steps and approximately 20 MB of snapshots. Native CAD and texture data can make projects larger than old mesh projects.
 
-**Polygon meshes, millimeters, orthographic view.** No parametric constraints, feature history, NURBS, fillets/chamfers, native OpenSketch/SketchUp, STEP, capsule primitive, extruded text, freehand brush, or plugin scripting. These remain future work; this is not full OpenSketch parity.
+Schema 1 and 2 projects migrate to schema 3 on load. Original meshes remain meshes until explicitly converted; existing file contents are never silently overwritten. Keep old backups: v1 cannot open schema 3 files.
 
-Curves are sampled polylines. Sweeps center the profile on the path start and transport it along the path; tight bends can self-intersect. Offsets reject simple collapse/crossing cases and may fail on complex concave profiles. Face-aligned sketches create separate objects; use a boolean for a cut. Direct solid-face push/pull rejects nonplanar side faces and is limited to 1,200 triangles. More complex changes should use booleans.
+Project validation rejects malformed geometry/reference data and unsupported image payloads. Imported files are data; the app has no imported-script execution feature. The solid worker operates locally.
 
-Boolean operations are bounded mesh operations, with a combined 3,000-input-triangle limit and complexity/time guards. Coincident or complex geometry can fail; errors preserve the inputs. Results are checked for closed, consistently oriented edge topology. This is not a tolerance-certified CAD kernel.
+## Interchange boundaries
 
-Inspect's crossing scan covers noncoplanar triangle crossings up to 1,200 triangles per object; larger scans report a skip. It does not detect every coplanar overlap, nested coincident shell or minimum-wall-thickness problem. Closed topology is not a printability certificate. Check geometry in an independent slicer before fabrication. Exporting multiple overlapping objects does not union them automatically.
-
-Saved dimensions are fixed endpoints and do not constrain or follow edited geometry. Reusable parts insert independent copies, not linked parametric instances. Layer-locked objects remain fixed when transforming a mixed selection; the selection label indicates locked members and fields describe editable members.
-
-STL excludes colors and lines. STL/OBJ coordinates are interpreted as millimeters on import. GLB uses standard meters/Y-up interchange, converted to/from this app's millimeters/Z-up. GLB import supports embedded uncompressed triangle and independent-line geometry plus base colors and node transforms. Required extensions, compressed meshes, sparse accessors, morph targets and skinning are rejected. Textures and animation are not retained. OBJ + MTL export produces two files in one ZIP; select both OBJ and MTL through Open to import their colors. External textures are not loaded.
-
-Model mesh exports use selected visible objects if selected, otherwise all visible objects. JSON includes hidden objects and all project metadata. PNG/print use the whole visible viewport. The Canvas 2D fallback now rasterizes opaque triangles with a per-pixel depth buffer and clips hidden feature edges. It can be slower than WebGL on large models. Both renderers keep internal coplanar seams hidden in shaded/solid modes; wireframe exposes mesh edges.
-
-Limits: 25 MB imported file, 2 MB MTL, 1,000 active objects / 150,000 active vertices, 250,000 vertices including reusable parts, 100 layers, 50 reusable parts, 100 saved dimensions, 50 views, 50 copies per array action. Imported meshes: 100,000 vertices / 60,000 faces; at most 1,000 vertices per profile/face. Curves: up to 256 samples; spline control points: up to 100; sweep: up to 200 profile and 200 path points. Large operations run synchronously and may pause the interface briefly.
-
-## Source and maintenance
-
-The deployable HTML is self-contained. Corresponding editable source is included:
-
-| File | Responsibility |
+| Format | Scope |
 | --- | --- |
-| `shell.html`, `style.css` | Interface markup and responsive styles |
-| `kernel.js` | Base vector and mesh geometry |
-| `geometry-plus.js` | Planes, checked face edits, curves, offsets, sweeps and diagnostics |
-| `solids.js` | Bounded BSP boolean operations |
-| `surfaces.js` | Direct region extrusion, connected faces and clean feature edges |
-| `software-renderer.js` | Per-pixel depth rendering for the Canvas fallback |
-| `interchange.js` | GLB, OBJ/MTL and ZIP codecs |
-| `app.js` | Viewport, interactions and baseline controller |
-| `precision.js` | Numeric sketching and face-plane controls |
-| `sketch-regions.js` | Nested-profile selection, border highlighting and extrusion |
-| `viewport-surfaces.js` | Hidden-edge clipping, software display and camera depth range |
-| `studio.js` | Solid/detail commands, annotations and views |
-| `projects.js` | Schema migration, storage, projects, layers and reusable parts |
-| `export-ui.js`, `finish.js` | Interchange UI, printing, contextual help and geometry cache |
-| `examples.js`, `make-examples.cjs` | Embedded examples and reproducible example generation |
-| `bootstrap.js`, `sw.js` | Initialization and optional offline caching |
+| JSON / `.sketchbench` | Complete project, native shapes, definitions, materials/textures, scenes and annotations |
+| STEP | One selected native object; exact surfaces, including curved fillets/chamfers |
+| STL | Triangulated geometry in millimeters; no colors, textures, linework or native history |
+| OBJ + MTL ZIP | Mesh geometry, lines and object colors; no full texture/face-material fidelity |
+| GLB | Static geometry, object colors and names; meter/Y-up interchange converted to/from mm/Z-up; textures and animations are not retained |
+| PNG / print | Current visible view, materials, sections and annotations |
+| SVG section | Closed section outlines in millimeters |
 
-Later controller files extend the baseline functions before bootstrap initializes the app. Runtime requests do not load these source files separately.
+Mesh exports include selected visible objects, or all visible objects when nothing is selected. Overlapping objects are not implicitly unioned. The mesh inspector and paired-edge tests are not a wall-thickness or fabrication guarantee.
 
-Maintainer commands:
+Remaining limits include native SKP/OpenSketch/DWG/DXF file compatibility, a full parametric sketch solver/history tree, multi-page LayOut-style documentation, UV unwrap/render engines, plugins/warehouse/cloud collaboration, exact freehand/spline reconstruction, and arbitrary BREP vertex deformation. See `ROADMAP.md` for release status. AI features remain excluded.
+
+## Build and test
+
+The ready-to-run package needs no build. For source changes, use Node 20+ and Python 3:
 
 ```sh
-node make-examples.cjs
-python3 build.py
-node --test tests/*.test.cjs
-python3 tests/independent_exports.py
+npm ci
+npm run build
+npm test
+npm run verify:exports
 ```
 
-`verification/extrusion-software.png` captures the actual software rasterizer output for a 50 × 60 × 20 mm frame with a flat center. It is a geometry/render-output check, not a browser screenshot.
+`make-native-examples.mjs` regenerates the native examples and their exports. `tests/render-native.mjs` emits software-renderer pixel data for inspection; it does not run a browser. `build.py` assembles the HTML from readable source modules. `build-cad.mjs` bundles the CAD adapter and copies pinned runtime assets. `package-lock.json` pins JS dependencies. Keep vendor assets and application code from the same release.
 
-No npm dependencies are needed. These packaging/testing commands are for maintainers only; hosting the supplied HTML needs no build. Keep the visible version, service-worker version and packaged HTML synchronized.
-
-The GLB implementation was checked against the Khronos glTF 2.0 specification: https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html . No third-party implementation code is bundled.
-
-## License
-
-Copyright © 2026 Green Shoe Garage. GNU General Public License version 3 only (`GPL-3.0-only`). Full text is in `LICENSE`; corresponding source is included.
+SKETCHBENCH code is GPL-3.0-only. It uses Replicad and facilities provided by Open CASCADE Technology. Their licenses and source provenance are in `THIRD-PARTY.md`, `licenses/`, and `third-party-source/`.

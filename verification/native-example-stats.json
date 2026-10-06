@@ -1,0 +1,23 @@
+[
+  {
+    "slug": "rounded-block",
+    "volume": 70300.2237135946,
+    "triangles": 2396,
+    "surfaces": 26,
+    "edges": 56
+  },
+  {
+    "slug": "chamfered-bore",
+    "volume": 38081.64856281013,
+    "triangles": 480,
+    "surfaces": 9,
+    "edges": 19
+  },
+  {
+    "slug": "filleted-enclosure",
+    "volume": 36097.69911184309,
+    "triangles": 508,
+    "surfaces": 19,
+    "edges": 48
+  }
+]

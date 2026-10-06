@@ -1,0 +1,12 @@
+a-little-workbench.stl: 208 nondegenerate triangles; all edges paired; volume 313181.714446 mm³
+chamfered-bore.stl: 480 nondegenerate triangles; all edges paired; volume 38089.308059 mm³
+drilled-l-bracket.stl: 2080 nondegenerate triangles; all edges paired; volume 31766.410978 mm³
+electronics-enclosure.stl: 644 nondegenerate triangles; all edges paired; volume 35364.708573 mm³
+filleted-enclosure.stl: 508 nondegenerate triangles; all edges paired; volume 36097.630258 mm³
+rounded-block.stl: 2396 nondegenerate triangles; all edges paired; volume 70288.532613 mm³
+a-little-workbench.glb: GLB header, lengths, alignment, 16 accessors and bounds verified
+chamfered-bore.glb: GLB header, lengths, alignment, 3 accessors and bounds verified
+drilled-l-bracket.glb: GLB header, lengths, alignment, 2 accessors and bounds verified
+electronics-enclosure.glb: GLB header, lengths, alignment, 4 accessors and bounds verified
+filleted-enclosure.glb: GLB header, lengths, alignment, 3 accessors and bounds verified
+rounded-block.glb: GLB header, lengths, alignment, 3 accessors and bounds verified
