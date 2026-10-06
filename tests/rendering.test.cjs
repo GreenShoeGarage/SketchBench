@@ -49,3 +49,9 @@ test('grid remains visible in empty space, holes and wireframe while model depth
  e.run("renderMode='solid';const cut=K.cylinder(5,40,24);K.transform(cut,p=>V.add(p,[20,20,-10]));Object.assign(doc.objects[0],K.boolean(doc.objects[0],cut,'subtract'));render()");nearColor(gl.pixel(),grid);
  e.run("doc.objects=[];const near=K.box(40,40,10);K.transform(near,p=>V.add(p,[0,0,-20]));doc.objects.push(makeObject('Near',near,'#cc6633'));doc.objects.push(makeObject('Far',K.box(40,40,20),'#336699'));render()");nearColor(gl.pixel(),[.8,.4,.2]);
 });
+
+test('finite blue workplane backdrop never paints over opaque models from above or below',async()=>{
+ const fs=require('node:fs'),html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8'),source=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1],e=environment(new Map(),source);await tick();
+ const gl=sampleRenderer();e.c.renderProbe=gl;e.run('gl=renderProbe;gpu={buffer:{},p:0,c:1};fallback=null;renderMode="solid";doc=newDocument();edit(()=>addObject("Box",K.box(40,40,20),"#336699"));selected.clear();selectedFace=null;camera.target=[20,20,10];camera.scale=3;prefs.showWorkplane=true;');
+ for(const setup of ['camera.az=0;camera.el=Math.PI/2;prefs.plane="xy";prefs.elevation=30','camera.az=0;camera.el=-Math.PI/2;prefs.plane="xy";prefs.elevation=-20','camera.az=Math.PI;camera.el=0;prefs.plane="xz";prefs.elevation=-10']){e.run(setup+';render()');nearColor(gl.pixel(),[.2,.4,.6]);}
+});

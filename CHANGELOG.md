@@ -1,3 +1,25 @@
+# 2.0.0-rc.5 — October 6, 2026
+
+- Add visible drawing dimensions for rectangles, circles, lines/profiles and rotated rectangles. Unit-aware fields share the mouse preview, preserve drawing direction, and support Tab/Enter, keyboard numeric entry, click-drag and two-click drawing.
+- Add Workplane… and Pick face controls, blue plane patch/border and U/V/N axes, explicit normal offsets, face view, visibility, and persistent face-plane preferences. Explicit planes no longer get silently replaced by automatic face alignment.
+- Add guided Split Body using two ordered parallel planar faces, midpoint or a distance from the first face, an orange plane, colored native preview, validation, cancellation and undo. Split linked members propagate without overlapping originals.
+- Check native split volume conservation and reject no-op/outside splits. Distances work with transformed solids and unit fractions; stale previews cannot commit after settings or model changes.
+- Add native-kernel, controller, shipped-script/worker and render-depth regressions. Real browser/GPU/touch acceptance remains open.
+
+# 2.0.0-rc.4 — October 6, 2026
+
+- Add Solid tools → Shell with inward wall thickness, clicked-face preselection, multiple openings, a face-view chooser, and fully closed hollow bodies.
+- Add preview/apply/cancel and transactional undo. Parameter changes and late worker results cannot restore stale previews or apply cancelled edits.
+- Validate native topology, connected material, volume removal, and exterior containment. Add a native offset/cut path for closed cavities and planar openings on filleted bodies when the thick-solid operation fails.
+- Correct the previously unexposed shell operation’s thickness direction and reject no-op kernel results.
+- Add shell geometry, worker, and controller regressions; all 128 tests pass.
+
+# 2.0.0-rc.3 — October 6, 2026
+
+- Align face sketch grids to a stable world-axis reference and projected world origin. Selecting a different triangle of the same face no longer rotates or offsets the grid.
+- Add Left and Bottom view buttons, preserving the model, zoom, and camera target. Keep the view-button group horizontally scrollable on narrow screens.
+- Add regression checks for all six native box faces, tilted faces, and button-driven camera orientation. Existing grid occlusion and full-orbit checks still pass.
+
 # 2.0.0-rc.2 — October 6, 2026
 
 - Bundle the deployed CAD worker and its JavaScript dependencies into `cad/worker.js`, removing the runtime requirement for `.mjs` MIME configuration.

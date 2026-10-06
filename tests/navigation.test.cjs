@@ -9,6 +9,24 @@ function move(e,dx,dy){e.nodes.get('stage').events.pointermove({clientX:400+dx,c
 function up(e){e.nodes.get('stage').events.pointerup();}
 const frame=e=>read(e,'Object.values(basis()).flat()');
 
+test('Left and Bottom buttons choose opposing views without changing the model or framing',async()=>{
+ const e=environment();await tick();e.run("edit(()=>addObject('Box',K.box(80,60,40)));fit();");
+ const before=e.run('snapshot()'),target=read(e,'camera.target'),scale=e.run('camera.scale');
+ for(const [view,back,right,up]of [
+  ['left',[-1,0,0],[0,-1,0],[0,0,1]],
+  ['bottom',[0,0,-1],[1,0,0],[0,-1,0]]
+ ]){
+  const button=e.run(`$$('[data-view]').find(b=>b.dataset.view==='${view}')`);assert.ok(button);
+  e.events.click({target:{closest:s=>s==='button'?button:null}});
+  near(read(e,'basis().back'),back);near(read(e,'basis().right'),right);near(read(e,'basis().up'),up);
+  assert.equal(e.nodes.get('viewLabel').textContent,view.toUpperCase());assert.ok(button.classList.contains('active'));
+  assert.equal(e.run("$$('[data-view]').filter(b=>b.classList.contains('active')).length"),1);
+  near(read(e,'camera.target'),target);assert.equal(e.run('camera.scale'),scale);
+  assert.equal(e.run('Boolean(hit(width/2,height/2))'),true);
+ }
+ assert.equal(e.run('snapshot()'),before);
+});
+
 test('orbit completes full horizontal, vertical and diagonal turns in both directions',async()=>{
  const e=environment();await tick();e.run("edit(()=>addObject('Box',K.box(80,60,40)));fit();setTool('orbit')");
  const before=e.run('snapshot()'),target=read(e,'camera.target'),scale=e.run('camera.scale');

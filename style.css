@@ -12,3 +12,13 @@
 /* v2 tool groups and edge lists. */
 .edgeList{max-height:220px;overflow:auto;border:1px solid var(--line);padding:8px;border-radius:7px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px}
 #inspector details details{margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px}#inspector details details summary{font-size:12px;margin:0 0 7px}#kernelState{display:block;margin-bottom:8px;overflow-wrap:anywhere}.inline{flex-wrap:wrap}button:disabled{opacity:.45;cursor:not-allowed}
+
+/* Keep every standard view reachable on narrow screens. */
+.viewbar .segmented{max-width:100%;overflow-x:auto;scrollbar-width:thin}.viewbar .segmented button{flex-shrink:0}
+
+.shellFaceList{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:7px;padding:6px 10px}.shellFaceRow{display:flex;gap:8px;align-items:center;padding:4px 0}.shellFaceRow label{flex:1;margin:0}.shellFaceRow button{min-height:30px;padding:4px 9px;font-size:11px}#shellFaceCount{display:block;margin-top:6px}
+
+/* Visible workplanes and in-viewport modeling workflows. */
+.viewbar{flex-wrap:wrap}.workplaneBar{position:absolute;top:65px;left:20px;right:20px;display:flex;align-items:center;flex-wrap:wrap;gap:5px;pointer-events:none}.workplaneBar>*{pointer-events:auto}.workplaneBar button{font-size:11px;min-height:29px;padding:4px 8px}.workplaneBar span{font-size:10px;background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:5px 8px}.viewportPanel{position:absolute;left:20px;bottom:65px;width:320px;max-width:calc(100% - 40px);max-height:calc(100% - 180px);overflow:auto;padding:14px;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);background:var(--panel);touch-action:auto}.viewportPanel[hidden]{display:none}.viewportPanel strong{font-size:13px}.viewportPanel p{font-size:11px;margin:8px 0;color:var(--muted)}.viewportPanel input.dimensionLocked{border-color:var(--orange);box-shadow:inset 3px 0 var(--orange)}.viewportPanel [role=status]:empty{display:none}.splitFaces button:first-child{border-left:4px solid #448bc4}.splitFaces button:last-child{border-left:4px solid #bb70b5}.viewportPanel small{display:block}.viewportPanel .inline{flex-wrap:wrap}
+@media(max-width:1100px){.viewbar{left:12px;right:12px;gap:4px}.viewbar button{padding:5px 6px}.workplaneBar{top:100px;left:12px;right:12px}.viewportPanel{left:12px;max-width:calc(100% - 24px);max-height:calc(100% - 225px)}}
+@media(max-height:620px){.viewportPanel{padding:9px;bottom:52px}.viewportPanel p{margin:4px 0}.viewportPanel label{margin:4px 0}.viewportPanel small{font-size:10px}}

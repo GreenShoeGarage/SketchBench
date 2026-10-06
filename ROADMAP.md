@@ -1,6 +1,6 @@
 # SKETCHBENCH v2 roadmap and release status
 
-October 6, 2026 · **2.0.0-rc.2**
+October 6, 2026 · **2.0.0-rc.5**
 
 The user authorized development through v2.0 without intermediate batch approvals. Fillets and chamfers are required features. They are implemented with a native CAD kernel and included in this candidate.
 
@@ -26,10 +26,18 @@ The user authorized development through v2.0 without intermediate batch approval
 5. First install and offline reload under a nested HTTPS route, including the worker, WASM, font and an app upgrade.
 6. Browser file pickers/downloads, screenshots and print/PDF output; independent viewer/slicer inspection.
 
-The hosted rc.1 startup failure was reproduced. rc.2 bundles a single `.js` worker and adds explicit WASM validation and recovery diagnostics; its HTTP/VM tests pass. Upload and browser acceptance of rc.2 are still required. No GPU, touch, native browser-storage or offline-load pass is claimed. The deliverable remains **rc.2**, pending that acceptance.
+The hosted rc.1 startup failure was reproduced. rc.2 bundles a single `.js` worker and adds explicit WASM validation and recovery diagnostics; its HTTP/VM tests pass. Upload and browser acceptance of rc.2 are still required. No GPU, touch, native browser-storage or offline-load pass is claimed. The deliverable remains **rc.5**, pending that acceptance.
 
 ## Broader gaps that remain outside this candidate
 
 Native SKP/OpenSketch/DWG/DXF compatibility; a full parametric constraint solver and feature tree; LayOut-style multi-page drawings; physical/geographic lighting and advanced rendering; UV unwrap and fully textured interchange; extension/warehouse ecosystems; multi-user collaboration; unrestricted native vertex deformation and difficult imported-shape repair.
 
 These are explicit remaining gaps, not hidden placeholders. The app remains self-hosted and local-first. AI, prompts, API keys, analytics and cloud account features remain excluded.
+
+### rc.4 addition
+
+Shell supports inward wall thickness, one or multiple face openings, and closed cavities, with native validation, preview/apply/cancel, and undo. Filleted planar openings have an offset/cut fallback. Automated coverage passes; browser acceptance remains part of the release gate.
+
+### rc.5 addition
+
+Visible in-viewport dimensions now share the mouse drawing draft. Workplane creation and face picking have explicit controls and finite plane visualization. Split Body selects two ordered parallel planar faces, with midpoint or a unit-aware offset from the first face, native preview and undo. Controller/kernel checks cover invalid selection, cancellation, transforms and linked components; browser acceptance remains open.

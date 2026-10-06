@@ -41,8 +41,14 @@ try{
   assert.ok(result.cad.volume>5000&&result.cad.volume<6000);
   assert.ok((await call('inspect',{object:result})).valid);
  }
+ const top=solid.cad.faces.find(f=>f.normal[2]>.99).index;
+ const hollow=await call('shell',{object:solid,faces:[top],thickness:1});
+ assert.ok(Math.abs(hollow.cad.volume-(6000-28*18*9))<1e-6);
+ const bottom=solid.cad.faces.find(f=>f.normal[2]<-.99).index;
+ const split=await call('splitBetweenFaces',{object:solid,faces:[top,bottom],mode:'distance',distance:3});
+ assert.equal(split.parts.length,2);assert.ok(Math.abs(split.parts[0].cad.volume-1800)<1e-6);
  assert.ok(!requests.some(p=>p.endsWith('.mjs')||p.endsWith('/occt.js')));
- console.log('PASS: nested HTTP deployment, binary MIME fallback, profile, extrusion, fillet, chamfer');
+ console.log('PASS: nested HTTP deployment, binary MIME fallback, profile, extrusion, fillet, chamfer, shell, two-face split');
  for(const [name,pattern] of [['missing',/HTTP 404.*replicad_single.wasm/],['denied',/HTTP 403.*replicad_single.wasm/],['html',/Expected WebAssembly.*invalid file/],['truncated',/Cannot initialize WebAssembly/]]){
   scenario=name;const failed=await launch();assert.match((await failed.wait(m=>m.ready||m.fatal)).fatal,pattern);
   console.log('PASS: '+name+' WASM returns an actionable startup error');

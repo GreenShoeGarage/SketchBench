@@ -47,6 +47,117 @@ function edgeFinish(s,args){const chosen=selectedIndices(s,args),es=s.edges,fs=s
  result=s[args.kind](e=>set.has(e.hashCode)?radius:null);return result;
  }finally{es.forEach(e=>e.delete());fs.forEach(f=>f.delete());}}
 function splitWith(s,tools){const splitter=new oc.BRepAlgoAPI_Splitter(),a=new oc.NCollection_List_TopoDS_Shape(),b=new oc.NCollection_List_TopoDS_Shape();try{a.Append(s.wrapped);for(const t of tools)b.Append(t.wrapped);splitter.SetArguments(a);splitter.SetTools(b);splitter.Build();if(!splitter.IsDone())throw Error('Could not divide this face.');return R.cast(splitter.Shape());}finally{splitter.delete();a.delete();b.delete();}}
+// Resolve references on the loaded, transformed BREP, never on display triangles.
+function betweenFacesPlane(s,args){
+ const fs=s.faces;
+ try{
+  const ids=args.faces;
+  if(!Array.isArray(ids)||ids.length!==2||ids[0]===ids[1]||ids.some(i=>!Number.isInteger(i)||!fs[i]))throw Error('Select two different planar faces on the same body.');
+  const [a,b]=ids.map(i=>fs[i]);
+  if(a.geomType!=='PLANE'||b.geomType!=='PLANE')throw Error('Split Body needs two planar, parallel faces. Curved faces cannot define a constant distance.');
+  let normal=tuple(a.normalAt());const other=tuple(b.normalAt());
+  if(Math.abs(dot(normal,other))<1-1e-8)throw Error('The two faces must be parallel. Use Split by work plane for an angled cut.');
+  const first=tuple(a.center),delta=tuple(b.center).map((v,i)=>v-first[i]),signed=dot(delta,normal),gap=Math.abs(signed);
+  if(gap<1e-5)throw Error('The faces are on the same plane. Select a face on the other side of the body.');
+  if(signed<0)normal=mul(normal,-1);
+  if(!['middle','distance'].includes(args.mode))throw Error('Choose Midpoint or Distance from first face.');
+  const distance=args.mode==='middle'?gap/2:finite(args.distance,'Split distance');
+  if(distance<=1e-6||distance>=gap-1e-6)throw Error('Split distance must be greater than 0 and less than '+Number(gap.toFixed(6))+' mm.');
+  return {origin:add(first,mul(normal,distance)),normal,gap,distance};
+ }finally{fs.forEach(f=>f.delete());}
+}
+function splitBody(s,plane,own){
+ const sourceVolume=R.measureVolume(s),tolerance=Math.max(1e-7,sourceVolume*1e-8),solids=s.solids;
+ try{if(solids.length!==1||sourceVolume<=tolerance)throw Error('Select one connected native solid to split.');}finally{solids.forEach(x=>x.delete());}
+ const p=new R.Plane(plane.origin,plane.xDir||null,plane.normal),halves=s.split(p),bodies=[];
+ for(const half of [halves.negative,halves.positive]){
+  if(!half)continue;own(half);const pieces=half.solids;pieces.forEach(own);
+  const usable=pieces.filter(x=>R.measureVolume(x)>tolerance);
+  if(!usable.length)throw Error('The split plane must pass through the interior of the body.');
+  bodies.push(...usable);
+ }
+ if(!halves.negative||!halves.positive||bodies.length<2)throw Error('The split plane must pass through the interior of the body.');
+ const parts=bodies.map(x=>serialize(x)),total=parts.reduce((n,x)=>n+x.cad.volume,0);
+ if(Math.abs(total-sourceVolume)>Math.max(tolerance*10,sourceVolume*1e-6))throw Error('The split did not preserve the body volume. The original is unchanged.');
+ return {parts,plane};
+}
+// Explicit offset/cut path for closed cavities and planar openings whose
+// MakeThickSolid result fails (notably some filleted walls).
+function offsetCavityShell(s,thickness,openings){
+ const builder=new oc.BRepOffsetAPI_MakeOffsetShape(),cleanup=[];
+ const own=x=>(cleanup.push(x),x);let result;
+ try{
+  const bounds=s.boundingBox.bounds;
+  if(bounds[0].some((v,i)=>bounds[1][i]-v<=2*thickness))throw Error('No interior offset fits at this wall thickness.');
+  builder.PerformByJoin(s.wrapped,-thickness,Math.min(.001,thickness/100),oc.BRepOffset_Mode.BRepOffset_Skin,false,false,oc.GeomAbs_JoinType.GeomAbs_Arc,true);
+  if(!builder.IsDone())throw Error('Could not construct the inner wall.');
+  const raw=own(R.cast(builder.Shape()));let inner;
+  if(raw instanceof R.Face){
+   // A sphere's offset is a single closed face; sewing leaves it a Face.
+   const shell=own(new oc.TopoDS_Shell()),b=own(new oc.TopoDS_Builder()),fix=own(new oc.ShapeFix_Solid());
+   b.MakeShell(shell);b.Add(shell,raw.wrapped);inner=own(new R.Solid(fix.SolidFromShell(shell)));
+  }else if(raw instanceof R.Solid)inner=own(raw.clone());
+  else if(raw instanceof R.Shell){const fix=own(new oc.ShapeFix_Solid());inner=own(new R.Solid(fix.SolidFromShell(raw.wrapped)));}
+  else inner=own(R.makeSolid([raw]));
+  check(inner);
+  const volume=R.measureVolume(inner),sourceVolume=R.measureVolume(s),tolerance=Math.max(1e-7,sourceVolume*1e-8);
+  if(volume<=tolerance||volume>=sourceVolume-tolerance)throw Error('No usable interior volume remains.');
+  const outside=own(inner.cut(s));if(Math.abs(R.measureVolume(outside))>tolerance)throw Error('The cavity offset lies outside the source.');
+  result=s.cut(inner);
+  for(const face of openings){
+   const generated=own(builder.Generated(face.wrapped)),list=own(new oc.NCollection_List_TopoDS_Shape(generated));
+   if(!list.Size())throw Error('Could not locate the inner opening face.');
+   while(list.Size()){
+    const offset=own(R.cast(list.First()));list.RemoveFirst();
+    if(!(offset instanceof R.Face)||offset.geomType!=='PLANE')throw Error('The inner opening is not planar.');
+    // Continue the generated inner face through the wall, preserving the lip.
+    const tool=own(R.basicFaceExtrusion(offset,new R.Vector(mul(tuple(face.normalAt()),thickness+Math.max(1e-5,thickness*1e-4)))));
+    const prior=result;result=null;try{result=prior.cut(tool);}finally{prior.delete();}
+   }
+  }
+  return result;
+ }catch(e){result?.delete();throw e;}
+ finally{cleanup.reverse().forEach(x=>x.delete());builder.delete();}
+}
+function shellSolid(s,args){
+ const thickness=positive(args.thickness,'Wall thickness'),fs=s.faces,solids=s.solids;
+ let result,outside;
+ try{
+  if(solids.length!==1)throw Error('Shell requires one connected solid. Split separate bodies first.');
+  const faces=args.closed?[]:(args.faces??(args.face===undefined?[]:[args.face]));
+  if(!Array.isArray(faces)||faces.some(i=>!Number.isInteger(i)||!fs[i]))throw Error('A shell face no longer exists. Select the opening faces again.');
+  const chosen=[...new Set(faces)];
+  if(!args.closed&&!chosen.length)throw Error('Choose at least one face to remove, or choose Closed hollow.');
+  if(chosen.length===fs.length)throw Error('Keep at least one face to form the shell.');
+  const sourceVolume=R.measureVolume(s),tolerance=Math.max(1e-7,sourceVolume*1e-8);
+  if(sourceVolume<=tolerance)throw Error('Shell requires a solid with enclosed volume.');
+  const ids=new Set(chosen.map(i=>fs[i].hashCode));
+  try{
+   const validate=()=>{
+    check(result);const volume=R.measureVolume(result),bodies=result.solids;
+    try{if(bodies.length!==1||volume<=tolerance||volume>=sourceVolume-tolerance)throw Error('No connected hollow wall remains at this thickness.');}finally{bodies.forEach(b=>b.delete());}
+    outside?.delete();outside=null;outside=result.cut(s);
+    if(Math.abs(R.measureVolume(outside))>tolerance)throw Error('The offset exceeds the original exterior.');
+   };
+   if(args.closed){result=offsetCavityShell(s,thickness,[]);validate();}
+   else{
+    try{
+     // Replicad negates its thickness argument for OCCT: positive is inward.
+     result=s.shell(thickness,f=>f.when(({element})=>ids.has(element.hashCode)));validate();
+    }catch(e){
+     result?.delete();result=null;
+     if(!chosen.every(i=>fs[i].geomType==='PLANE'))throw e;
+     result=offsetCavityShell(s,thickness,chosen.map(i=>fs[i]));validate();
+    }
+   }
+   return result;
+  }catch(e){
+   result?.delete();result=null;
+   const reason=typeof e==='number'?'':(e.message||String(e));
+   throw Error('Cannot shell this solid at '+thickness+' mm. Try a smaller wall thickness, different openings, or shell before fillets and small details.'+(reason?' '+reason:''));
+  }
+ }finally{fs.forEach(f=>f.delete());solids.forEach(b=>b.delete());outside?.delete();}
+}
 export async function operate(op,a={}){
  let s,result;const cleanup=[];const own=x=>(cleanup.push(x),x);
  try{
@@ -78,7 +189,8 @@ export async function operate(op,a={}){
  if(op==='undoFeature'){result=load({cad:{brep:a.object.cad.lastFeature?.base||a.object.cad.brep,transforms:a.object.cad.transforms}});return serialize(result);}
  if(op==='editFeature'){const feature=a.object.cad.lastFeature;if(!feature)throw Error('No editable edge treatment on this object.');const base=own(load({cad:{brep:feature.base,transforms:a.object.cad.transforms}}));result=edgeFinish(base,{...feature.args,...a});return serialize(result,{lastFeature:{base:base.serialize(),kind:a.kind||feature.kind,args:{...feature.args,...a,object:undefined}}});}
  if(op==='boolean'){const b=own(load(a.other));result=s[{union:'fuse',subtract:'cut',intersect:'intersect',trim:'cut'}[a.kind]||'fuse'](b);}
- else if(op==='splitPlane'){const p=new R.Plane(a.origin||[0,0,0],a.xDir||null,a.normal||[0,0,1]),parts=s.split(p);return {parts:[parts.positive,parts.negative].filter(Boolean).map(x=>{own(x);return serialize(x);})};}
+ else if(op==='splitPlane')return splitBody(s,{origin:a.origin||[0,0,0],xDir:a.xDir||null,normal:a.normal||[0,0,1]},own);
+ else if(op==='splitBetweenFaces')return splitBody(s,betweenFacesPlane(s,a),own);
  else if(op==='splitFace'){const ps=a.points,wire=a.closed?own(polygon(ps)).outerWire():R.assembleWire(ps.slice(1).map((p,i)=>own(R.makeLine(ps[i],p))));own(wire);result=splitWith(s,[wire]);}
  else if(op==='offset'){const face=own(s.faces[a.face]);if(face.geomType!=='PLANE')throw Error('Offset requires a planar face.');const sketch=R.sketchFaceOffset(face,finite(a.distance));result=sketch.face();if(a.divide){own(result);result=splitWith(s,[own(result.outerWire())]);}}
  else if(op==='resize'){const axis=a.axis,bb=s.boundingBox.bounds,current=bb[1][axis]-bb[0][axis],delta=positive(a.size,'Size')-current,fs=s.faces;const f=fs.find(f=>f.geomType==='PLANE'&&tuple(f.normalAt())[axis]>.999&&Math.abs(tuple(f.center)[axis]-bb[1][axis])<1e-4);if(!f)throw Error('No planar end face on this axis. Use face Push/pull or uniform scale.');const vec=[0,0,0];vec[axis]=delta;const t=own(R.basicFaceExtrusion(f,new R.Vector(vec)));result=delta>0?s.fuse(t):s.cut(t);fs.forEach(f=>f.delete());}
@@ -94,7 +206,7 @@ export async function operate(op,a={}){
  else if(op==='transform'){
  result=s.clone();if(a.kind==='translate')result=result.translate(a.vector.map(n=>finite(n)));else if(a.kind==='rotate')result=result.rotate(finite(a.angle),a.center,a.axis);else if(a.kind==='scale')result=result.scale(positive(a.factor,'Scale'),a.center);else if(a.kind==='mirror')result=result.mirror(a.normal,a.center);else throw Error('Unknown transform.');
  }
- else if(op==='shell')result=s.shell(positive(a.thickness,'Thickness')*-1,f=>f.when(({element})=>s.faces[a.face]?.isSame(element)));
+ else if(op==='shell')result=shellSolid(s,a);
  if(!result)throw Error('Unsupported solid operation.');return serialize(result);
  }catch(e){if(globalThis.CAD_DEBUG)console.error(e.stack);throw Error(typeof e==='number'?'The kernel could not construct this geometry. Reduce the radius or distance, or change the selected edges.':e.message||String(e));}
  finally{if(result)try{result.delete();}catch{}for(const x of cleanup)try{x.delete();}catch{}}
