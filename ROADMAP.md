@@ -1,6 +1,6 @@
 # SKETCHBENCH v2 roadmap and release status
 
-October 6, 2026 · **2.0.0-rc.5**
+October 6, 2026 · **2.0.0-rc.6**
 
 The user authorized development through v2.0 without intermediate batch approvals. Fillets and chamfers are required features. They are implemented with a native CAD kernel and included in this candidate.
 
@@ -26,7 +26,7 @@ The user authorized development through v2.0 without intermediate batch approval
 5. First install and offline reload under a nested HTTPS route, including the worker, WASM, font and an app upgrade.
 6. Browser file pickers/downloads, screenshots and print/PDF output; independent viewer/slicer inspection.
 
-The hosted rc.1 startup failure was reproduced. rc.2 bundles a single `.js` worker and adds explicit WASM validation and recovery diagnostics; its HTTP/VM tests pass. Upload and browser acceptance of rc.2 are still required. No GPU, touch, native browser-storage or offline-load pass is claimed. The deliverable remains **rc.5**, pending that acceptance.
+Hosted rc.5 tests now confirm native engine startup, Shell → Split Body on an open box, and all-edge fillet → closed Shell → Split Body on a rounded box in the cloud Chrome browser. This is partial desktop coverage. rc.6 adds versioned worker paths and a strict startup handshake to prevent stale-worker command mismatches; HTTP/VM and cache simulations cover the update, but actual rc.6 deployment, upgrade/offline, touch and full browser acceptance remain open. The deliverable remains **rc.6**, pending that acceptance.
 
 ## Broader gaps that remain outside this candidate
 
@@ -41,3 +41,7 @@ Shell supports inward wall thickness, one or multiple face openings, and closed 
 ### rc.5 addition
 
 Visible in-viewport dimensions now share the mouse drawing draft. Workplane creation and face picking have explicit controls and finite plane visualization. Split Body selects two ordered parallel planar faces, with midpoint or a unit-aware offset from the first face, native preview and undo. Controller/kernel checks cover invalid selection, cancellation, transforms and linked components; browser acceptance remains open.
+
+### rc.6 correction
+
+A release-specific worker URL bypasses stale earlier caches; a version handshake blocks mismatched engines before any geometry request. The exact unsupported Split Body command error was reproduced against the previous worker. Shipped-worker checks include Shell → Split Body at midpoint and numeric offsets. This fixes runtime version compatibility; the earlier model-specific Shell display report still needs the affected project to diagnose.

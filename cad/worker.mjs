@@ -1,5 +1,6 @@
 import init from '../vendor/occt.js';
 import {configure,operate} from './core.mjs';
+import runtime from '../package.json';
 // Fetch explicitly so missing files, HTML fallbacks, and denied requests keep
 // their useful error details. Byte instantiation also works when a host serves
 // .wasm as application/octet-stream instead of application/wasm.
@@ -16,7 +17,7 @@ const ready=(async()=>{
  postMessage({status:'Starting solid engine…'});
  try{configure(await init({wasmBinary:bytes,locateFile:p=>new URL('../vendor/'+p,import.meta.url).href}));}
  catch(e){throw Error('Cannot initialize WebAssembly: '+(e.message||String(e)));}
- postMessage({ready:true});
+ postMessage({ready:true,version:runtime.version});
 })();
 self.onmessage=async({data:{id,op,args}})=>{try{await ready;postMessage({id,result:await operate(op,args)});}catch(e){postMessage({id,error:e.message||String(e)});}};
 ready.catch(e=>postMessage({fatal:e.message||String(e)}));

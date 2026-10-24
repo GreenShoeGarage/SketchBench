@@ -5,12 +5,14 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import vm from 'node:vm';
 
-const code=await fs.readFile(new URL('../cad/worker.js',import.meta.url),'utf8');
+const {version}=JSON.parse(await fs.readFile(new URL('../package.json',import.meta.url),'utf8'));
+const workerPath='/nested/sketchbench/cad/worker-'+version+'.js';
+const code=await fs.readFile(new URL('../cad/worker-'+version+'.js',import.meta.url),'utf8');
 const wasm=await fs.readFile(new URL('../vendor/replicad_single.wasm',import.meta.url));
 let scenario='valid';const requests=[];
 const server=http.createServer((req,res)=>{
  requests.push(req.url);
- if(req.url==='/nested/sketchbench/cad/worker.js'){res.writeHead(200,{'Content-Type':'text/javascript'});res.end(code);return;}
+ if(req.url===workerPath){res.writeHead(200,{'Content-Type':'text/javascript'});res.end(code);return;}
  if(req.url==='/nested/sketchbench/vendor/replicad_single.wasm'){
   const status=scenario==='missing'?404:scenario==='denied'?403:200;
   res.writeHead(status,{'Content-Type':scenario==='html'?'text/html':'application/octet-stream'});
@@ -19,7 +21,7 @@ const server=http.createServer((req,res)=>{
  res.writeHead(404);res.end();
 });
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
-const url=`http://127.0.0.1:${server.address().port}/nested/sketchbench/cad/worker.js`;
+const url=`http://127.0.0.1:${server.address().port}${workerPath}`;
 async function launch(){
  const messages=[],pending=[];
  const sandbox={URL,fetch,console,crypto,WebAssembly,TextDecoder,TextEncoder,setTimeout,clearTimeout,AbortController,performance,WorkerGlobalScope:class{},location:{href:url},postMessage:m=>{messages.push(m);for(const p of [...pending])if(p.matches(m)){pending.splice(pending.indexOf(p),1);p.resolve(m);}}};
@@ -30,7 +32,7 @@ async function launch(){
  return {context,wait,messages};
 }
 try{
- const runtime=await launch(),startup=await runtime.wait(m=>m.ready||m.fatal);assert.ok(startup.ready,startup.fatal);
+ const runtime=await launch(),startup=await runtime.wait(m=>m.ready||m.fatal);assert.ok(startup.ready,startup.fatal);assert.equal(startup.version,version);
  let sequence=0;
  const call=async(op,args)=>{const id=++sequence;runtime.context.onmessage({data:{id,op,args}});const r=await runtime.wait(m=>m.id===id);if(r.error)throw Error(r.error);return r.result;};
  const profile=await call('profile',{loops:[[[0,0,0],[30,0,0],[30,20,0],[0,20,0]]]});
@@ -47,8 +49,15 @@ try{
  const bottom=solid.cad.faces.find(f=>f.normal[2]<-.99).index;
  const split=await call('splitBetweenFaces',{object:solid,faces:[top,bottom],mode:'distance',distance:3});
  assert.equal(split.parts.length,2);assert.ok(Math.abs(split.parts[0].cad.volume-1800)<1e-6);
+ for(const [axis,distance] of [[0,null],[1,7]]){
+  const faces=[hollow.cad.faces.find(f=>f.normal[axis]>.99&&f.center[axis]>10).index,hollow.cad.faces.find(f=>f.normal[axis]<-.99&&Math.abs(f.center[axis])<1e-6).index];
+  const result=await call('splitBetweenFaces',{object:hollow,faces,mode:distance===null?'middle':'distance',distance});
+  assert.equal(result.parts.length,2);
+  assert.ok(Math.abs(result.parts.reduce((v,o)=>v+o.cad.volume,0)-hollow.cad.volume)<1e-6);
+  for(const part of result.parts)assert.ok((await call('inspect',{object:part})).valid);
+ }
  assert.ok(!requests.some(p=>p.endsWith('.mjs')||p.endsWith('/occt.js')));
- console.log('PASS: nested HTTP deployment, binary MIME fallback, profile, extrusion, fillet, chamfer, shell, two-face split');
+ console.log('PASS: nested HTTP deployment, binary MIME fallback, profile, extrusion, fillet, chamfer, shell, two-face split, shell followed by midpoint and offset splits');
  for(const [name,pattern] of [['missing',/HTTP 404.*replicad_single.wasm/],['denied',/HTTP 403.*replicad_single.wasm/],['html',/Expected WebAssembly.*invalid file/],['truncated',/Cannot initialize WebAssembly/]]){
   scenario=name;const failed=await launch();assert.match((await failed.wait(m=>m.ready||m.fatal)).fatal,pattern);
   console.log('PASS: '+name+' WASM returns an actionable startup error');

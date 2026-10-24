@@ -28,13 +28,17 @@ function initCAD(){
  if(typeof Worker==='undefined'){cadFail('This browser does not support Web Workers. Update the browser to use solid tools.');return;}
  if(!/^https?:$/.test(location.protocol)){cadFail('Open SKETCHBENCH through an HTTP or HTTPS web server. Direct file opening cannot load the solid engine.');return;}
  try{
-  const url=new URL('./cad/worker.js',document.baseURI).href;
+  // A distinct path also bypasses older service workers that discard query strings.
+  const url=new URL('./cad/worker-'+VERSION+'.js',document.baseURI).href;
   const worker=cadWorker=new Worker(url,{type:'module'});
   cadStartupTimer=setTimeout(()=>{if(cadWorker===worker&&!cadReady)cadFail('The solid engine did not start within 90 seconds. Check the connection, then choose Retry solid engine.');},90000);
   worker.onmessage=({data})=>{
    if(cadWorker!==worker||cadFailure)return;
    if(data.status){if(!cadBusy)cadState(data.status);return;}
-   if(data.ready){clearTimeout(cadStartupTimer);cadReady=true;cadState();sync();return;}
+   if(data.ready){
+    if(data.version!==VERSION){cadFail('Solid engine update required: page '+VERSION+' received '+(data.version||'an older unversioned engine')+'. Upload all files from the same release, including cad/worker-'+VERSION+'.js, then reload and close/reopen all SKETCHBENCH tabs. Saved projects are unchanged.');sync();return;}
+    clearTimeout(cadStartupTimer);cadReady=true;cadState();sync();return;
+   }
    if(data.fatal){cadFail(data.fatal);return;}
    const p=cadPending.get(data.id);if(!p)return;clearTimeout(p.timer);cadPending.delete(data.id);
    data.error?p.reject(Error(data.error)):p.resolve(data.result);
@@ -47,7 +51,7 @@ function initCAD(){
   };
  }catch(e){cadFail('Cannot start the solid worker: '+(e.message||String(e)));}
 }
-function cadCall(op,args){if(!cadWorker||cadFailure)return Promise.reject(Error(cadFailure||'Solid tools require the complete hosted folder.'));return new Promise((resolve,reject)=>{const n=++cadSequence,timer=setTimeout(()=>{cadPending.delete(n);reject(Error('The geometry operation timed out. Cancel and retry with a simpler selection.'));},60000);cadPending.set(n,{resolve,reject,timer});cadWorker.postMessage({id:n,op,args});});}
+function cadCall(op,args){if(!cadWorker||cadFailure)return Promise.reject(Error(cadFailure||'Solid tools require the complete hosted folder.'));if(!cadReady)return Promise.reject(Error('Wait for the solid engine to finish initializing.'));return new Promise((resolve,reject)=>{const n=++cadSequence,timer=setTimeout(()=>{cadPending.delete(n);reject(Error('The geometry operation timed out. Cancel and retry with a simpler selection.'));},60000);cadPending.set(n,{resolve,reject,timer});cadWorker.postMessage({id:n,op,args});});}
 async function cadTask(label,fn){if(cadBusy){toast('Finish or cancel the current solid operation.');return;}cadBusy=true;cadState(label+'…');try{return await fn();}catch(e){toast(e.message,10000);return null;}finally{cadBusy=false;cadState();}}
 function cadApply(fn){cadCommit=true;try{return edit(fn);}finally{cadCommit=false;}}
 const beforeCadEdit=edit;edit=function(fn){if(cadBusy&&!cadCommit){toast('Wait for the solid operation to finish.');return false;}return beforeCadEdit(fn);};

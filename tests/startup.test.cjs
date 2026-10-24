@@ -1,10 +1,11 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {execFile}=require('node:child_process'),{promisify}=require('node:util');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../cad-ui.js'),'utf8').split('async function cadTask')[0];
+const {version}=require('../package.json');
 function setup(fetch=async()=>new Response('',{headers:{'Content-Type':'text/javascript'}})){
  const nodes=new Map(),workers=[],timers=new Map();let timerSequence=0;
  class Worker{constructor(url,options){this.url=url;this.options=options;workers.push(this);}terminate(){this.terminated=true;}postMessage(data){this.sent=data;}}
- const c=vm.createContext({Worker,URL,AbortController,fetch,console,location:{protocol:'https:'},document:{baseURI:'https://example.test/tools/sketchbench/'},$:key=>{if(!nodes.has(key))nodes.set(key,{});return nodes.get(key);},setTimeout:(fn,ms)=>{timers.set(++timerSequence,{fn,ms});return timerSequence;},clearTimeout:id=>timers.delete(id),sync(){}});
+ const c=vm.createContext({VERSION:version,Worker,URL,AbortController,fetch,console,location:{protocol:'https:'},document:{baseURI:'https://example.test/tools/sketchbench/'},$:key=>{if(!nodes.has(key))nodes.set(key,{});return nodes.get(key);},setTimeout:(fn,ms)=>{timers.set(++timerSequence,{fn,ms});return timerSequence;},clearTimeout:id=>timers.delete(id),sync(){}});
  vm.runInContext(source,c);return {run:s=>vm.runInContext(s,c),c,nodes,workers,timers};
 }
 test('shipped worker starts over HTTP and rejects malformed deployments',async()=>{
@@ -19,11 +20,12 @@ test('worker diagnostics distinguish missing files, forbidden assets, and wrong 
 });
 test('startup failure rejects pending operations and retry ignores stale worker responses',async()=>{
  let resolveFetch;const e=setup(()=>new Promise(r=>resolveFetch=r));e.run('initCAD()');const first=e.workers[0];
- assert.equal(first.url,'https://example.test/tools/sketchbench/cad/worker.js');
+ assert.equal(first.url,'https://example.test/tools/sketchbench/cad/worker-'+version+'.js');
+ first.onmessage({data:{ready:true,version}});
  const pending=e.run('cadCall("profile",{})');const rejected=assert.rejects(pending,/Solid worker failed/);
  first.onerror({message:''});await rejected;assert.ok(first.terminated);assert.equal(e.nodes.get('#cadRecovery').hidden,false);
  e.run('initCAD()');const second=e.workers[1];first.onmessage({data:{ready:true}});assert.equal(e.run('cadReady'),false);
- second.onmessage({data:{ready:true}});resolveFetch(new Response('',{status:404}));await new Promise(r=>setImmediate(r));
+ second.onmessage({data:{ready:true,version}});resolveFetch(new Response('',{status:404}));await new Promise(r=>setImmediate(r));
  assert.equal(e.run('cadReady'),true);assert.equal(e.run('cadFailure'),'');assert.equal(e.nodes.get('#cadRecovery').hidden,true);
  assert.equal(e.timers.size,0);
 });
@@ -35,4 +37,22 @@ test('fatal WASM errors retain their details and a silent startup times out',()=
 test('unsupported browser and file opening failures are actionable',()=>{
  const e=setup();e.run('location.protocol="file:";initCAD()');assert.match(e.run('cadFailure'),/HTTP or HTTPS/);assert.equal(e.workers.length,0);
  e.run('Worker=undefined;initCAD()');assert.match(e.run('cadFailure'),/Web Workers/);
+});
+
+test('legacy or mismatched workers cannot enable tools or receive geometry requests',async()=>{
+ for(const received of [undefined,'2.0.0-rc.4','99.0.0']){
+  const e=setup();e.run('initCAD()');const worker=e.workers[0];
+  await assert.rejects(e.run('cadCall("splitBetweenFaces",{})'),/initializing/);
+  assert.equal(worker.sent,undefined);
+  worker.onmessage({data:{ready:true,version:received}});
+  assert.equal(e.run('cadReady'),false);assert.ok(worker.terminated);
+  assert.match(e.run('cadFailure'),/Solid engine update required.*Upload all files/);
+  assert.equal(e.nodes.get('#cadRecovery').hidden,false);
+  await assert.rejects(e.run('cadCall("shell",{})'),/update required/);
+  assert.equal(worker.sent,undefined);
+  e.run('initCAD()');const current=e.workers[1];current.onmessage({data:{ready:true,version}});
+  const request=e.run('cadCall("inspect",{})');assert.equal(current.sent.op,'inspect');
+  current.onmessage({data:{id:current.sent.id,result:{valid:true}}});
+  assert.equal((await request).valid,true);assert.equal(e.timers.size,0);
+ }
 });

@@ -25,7 +25,7 @@
 @media(max-height:620px){.viewportPanel{padding:9px;bottom:52px}.viewportPanel p{margin:4px 0}.viewportPanel label{margin:4px 0}.viewportPanel small{font-size:10px}}
 </style></head>
 <body>
-<header><a class="brand" href="#" aria-label="SKETCHBENCH home"><svg viewBox="0 0 40 44" aria-hidden="true"><path d="M3 12 20 2 37 12 37 32 20 42 3 32Z M3 12 20 22 37 12 M20 22V42"/></svg><span>SKETCHBENCH<small>GREEN SHOE GARAGE · v2.0.0-rc.5</small></span></a><input id="projectName" aria-label="Project name" value="Untitled model" maxlength="80"><span id="saveState" role="status" class="saved">Saved locally</span><div class="headerActions"><button data-action="projects" title="Saved local projects">Projects</button><button data-action="file" aria-haspopup="dialog">File <span>▾</span></button><button data-action="undo" title="Undo (Ctrl/⌘ Z)" aria-label="Undo">↶</button><button data-action="redo" title="Redo (Ctrl/⌘ Shift Z)" aria-label="Redo">↷</button><button id="mode" title="Show precision and mesh controls">Easy</button><button data-action="theme" title="Change interface theme" aria-label="Change theme">◐</button><button data-action="help" aria-label="Help and keyboard shortcuts">?</button><button class="primary" data-action="export">Export ↗</button></div></header>
+<header><a class="brand" href="#" aria-label="SKETCHBENCH home"><svg viewBox="0 0 40 44" aria-hidden="true"><path d="M3 12 20 2 37 12 37 32 20 42 3 32Z M3 12 20 22 37 12 M20 22V42"/></svg><span>SKETCHBENCH<small>GREEN SHOE GARAGE · v2.0.0-rc.6</small></span></a><input id="projectName" aria-label="Project name" value="Untitled model" maxlength="80"><span id="saveState" role="status" class="saved">Saved locally</span><div class="headerActions"><button data-action="projects" title="Saved local projects">Projects</button><button data-action="file" aria-haspopup="dialog">File <span>▾</span></button><button data-action="undo" title="Undo (Ctrl/⌘ Z)" aria-label="Undo">↶</button><button data-action="redo" title="Redo (Ctrl/⌘ Shift Z)" aria-label="Redo">↷</button><button id="mode" title="Show precision and mesh controls">Easy</button><button data-action="theme" title="Change interface theme" aria-label="Change theme">◐</button><button data-action="help" aria-label="Help and keyboard shortcuts">?</button><button class="primary" data-action="export">Export ↗</button></div></header>
 <div class="workspace">
 <nav id="tools" aria-label="Modeling tools"></nav>
 <main id="stage" aria-label="3D modeling viewport" tabindex="0"><canvas id="view" aria-label="3D model"></canvas><canvas id="overlay" aria-hidden="true"></canvas>
@@ -274,7 +274,7 @@ Object.assign(K,{glb,parseGLB,objMaterials,parseOBJScene,zip});
 </script><script>/* SKETCHBENCH 0.1.0 — Copyright 2026 Green Shoe Garage. GPL-3.0-only. */
 'use strict';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],{V}=K;
-const VERSION='2.0.0-rc.5',KEY='sketchbench-v1:'+((location.pathname||'/').replace(/[^/]*$/,'')),id=()=>crypto.randomUUID?crypto.randomUUID():'o'+Date.now()+Math.random().toString(16).slice(2),clone=x=>JSON.parse(JSON.stringify(x)),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const VERSION='2.0.0-rc.6',KEY='sketchbench-v1:'+((location.pathname||'/').replace(/[^/]*$/,'')),id=()=>crypto.randomUUID?crypto.randomUUID():'o'+Date.now()+Math.random().toString(16).slice(2),clone=x=>JSON.parse(JSON.stringify(x)),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let doc={app:'SKETCHBENCH',schema:1,version:VERSION,name:'Untitled model',units:'mm',objects:[]},selected=new Set(),selectedFace=null,tool='select',points=[],hover=null,gesture=null,history=[],future=[],dirty=false,db=null,saveTimer,saveQueue=Promise.resolve(),savedSnapshot=null,conflict=false;
 let prefs={theme:'light',advanced:false,plane:'xy',elevation:0,grid:10,snap:true,color:'#70b69b',panel:innerWidth>760},camera={az:Math.PI-.75,el:.6,scale:2.8,target:[0,0,0]},renderMode='shaded',measure=null;
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(KEY+'-prefs')||localStorage.getItem('sketchbench-v1-prefs')||'{}'));}catch{}
@@ -651,13 +651,17 @@ function initCAD(){
  if(typeof Worker==='undefined'){cadFail('This browser does not support Web Workers. Update the browser to use solid tools.');return;}
  if(!/^https?:$/.test(location.protocol)){cadFail('Open SKETCHBENCH through an HTTP or HTTPS web server. Direct file opening cannot load the solid engine.');return;}
  try{
-  const url=new URL('./cad/worker.js',document.baseURI).href;
+  // A distinct path also bypasses older service workers that discard query strings.
+  const url=new URL('./cad/worker-'+VERSION+'.js',document.baseURI).href;
   const worker=cadWorker=new Worker(url,{type:'module'});
   cadStartupTimer=setTimeout(()=>{if(cadWorker===worker&&!cadReady)cadFail('The solid engine did not start within 90 seconds. Check the connection, then choose Retry solid engine.');},90000);
   worker.onmessage=({data})=>{
    if(cadWorker!==worker||cadFailure)return;
    if(data.status){if(!cadBusy)cadState(data.status);return;}
-   if(data.ready){clearTimeout(cadStartupTimer);cadReady=true;cadState();sync();return;}
+   if(data.ready){
+    if(data.version!==VERSION){cadFail('Solid engine update required: page '+VERSION+' received '+(data.version||'an older unversioned engine')+'. Upload all files from the same release, including cad/worker-'+VERSION+'.js, then reload and close/reopen all SKETCHBENCH tabs. Saved projects are unchanged.');sync();return;}
+    clearTimeout(cadStartupTimer);cadReady=true;cadState();sync();return;
+   }
    if(data.fatal){cadFail(data.fatal);return;}
    const p=cadPending.get(data.id);if(!p)return;clearTimeout(p.timer);cadPending.delete(data.id);
    data.error?p.reject(Error(data.error)):p.resolve(data.result);
@@ -670,7 +674,7 @@ function initCAD(){
   };
  }catch(e){cadFail('Cannot start the solid worker: '+(e.message||String(e)));}
 }
-function cadCall(op,args){if(!cadWorker||cadFailure)return Promise.reject(Error(cadFailure||'Solid tools require the complete hosted folder.'));return new Promise((resolve,reject)=>{const n=++cadSequence,timer=setTimeout(()=>{cadPending.delete(n);reject(Error('The geometry operation timed out. Cancel and retry with a simpler selection.'));},60000);cadPending.set(n,{resolve,reject,timer});cadWorker.postMessage({id:n,op,args});});}
+function cadCall(op,args){if(!cadWorker||cadFailure)return Promise.reject(Error(cadFailure||'Solid tools require the complete hosted folder.'));if(!cadReady)return Promise.reject(Error('Wait for the solid engine to finish initializing.'));return new Promise((resolve,reject)=>{const n=++cadSequence,timer=setTimeout(()=>{cadPending.delete(n);reject(Error('The geometry operation timed out. Cancel and retry with a simpler selection.'));},60000);cadPending.set(n,{resolve,reject,timer});cadWorker.postMessage({id:n,op,args});});}
 async function cadTask(label,fn){if(cadBusy){toast('Finish or cancel the current solid operation.');return;}cadBusy=true;cadState(label+'…');try{return await fn();}catch(e){toast(e.message,10000);return null;}finally{cadBusy=false;cadState();}}
 function cadApply(fn){cadCommit=true;try{return edit(fn);}finally{cadCommit=false;}}
 const beforeCadEdit=edit;edit=function(fn){if(cadBusy&&!cadCommit){toast('Wait for the solid operation to finish.');return false;}return beforeCadEdit(fn);};

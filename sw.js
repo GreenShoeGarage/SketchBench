@@ -1,6 +1,6 @@
 /* SKETCHBENCH scoped offline runtime. GPL-3.0-only. */
-const PREFIX='sketchbench:'+self.registration.scope+':',CACHE=PREFIX+'2.0.0-rc.5';
-const ASSETS=['./','./index.html','./cad/worker.js','./vendor/replicad_single.wasm','./vendor/DejaVuSans.ttf'];
+const PREFIX='sketchbench:'+self.registration.scope+':',CACHE=PREFIX+'2.0.0-rc.6';
+const ASSETS=['./','./index.html','./cad/worker-2.0.0-rc.6.js','./vendor/replicad_single.wasm','./vendor/DejaVuSans.ttf'];
 const URLS=new Set(ASSETS.map(p=>new URL(p,self.location.href).href));
 // Installation is atomic: retain the current version if any asset is missing.
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(p=>new Request(new URL(p,self.location.href),{cache:'reload'}))))));

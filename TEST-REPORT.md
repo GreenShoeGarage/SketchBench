@@ -1,14 +1,17 @@
-# SKETCHBENCH 2.0.0-rc.5 verification
+# SKETCHBENCH 2.0.0-rc.6 verification
 
 October 6, 2026. **Release candidate; real-browser acceptance remains open.**
 
 ## Automated evidence
 
-**145 tests passed; zero failures.**
+**148 tests passed; zero failures.**
 
 `npm test` runs the original regression suite plus native-kernel, v2 controller, shipped-bundle and offline-manifest checks. The recorded output is in `verification/automated-tests.txt`.
 
 The suite covers:
+
+- Runtime compatibility: exact reported “Unsupported solid operation.” error reproduced by sending `splitBetweenFaces` to the rc.4 worker. The new versioned path is ignored by the real rc.4 cache handler while the old path with a version query is intercepted. The current handler serves only its own worker version. Missing/wrong worker versions are rejected before any geometry request; matching retry recovers.
+- Shipped worker: matching release handshake and Shell → Split Body with midpoint and numeric offsets create two valid solids and conserve material volume through the real WASM kernel under a nested HTTP path.
 
 - Exact drawing: negative-quadrant rectangle widths/heights with unit fractions; mixed mouse/typed dimensions; analytic circle radius; line length/angle; rotated rectangle edge direction; invalid values; numeric focus; click-drag and two-click retention.
 - Workplanes: normal-offset plane geometry, sketch coplanarity, show/hide, native face picking, offset-host separation and preference round trip with invalid-frame rejection. Software samples of actual draw batches confirm the finite plane backdrop does not occlude opaque solids.
@@ -23,7 +26,7 @@ The suite covers:
 - Controller using a DOM stub: native save/migration/undo, face-plane sketch and cut, exact rectangle/circle region extrusion, linked instance geometry/color and added/deleted members, late-preview cancellation, perspective inversion/clipping, filled sections with holes, attached dimensions, angular/leader persistence and texture payload validation.
 - Actual software rasterizer: per-pixel depth ordering, smooth vertex colors, texture samples, transparency compositing, clear/resize behavior. These produce pixel arrays, not mocked screenshots.
 - Shipped `cad/core.bundle.mjs` with shipped loader/WASM: successful primitive creation, fillet and kernel validation.
-- Shipped `cad/worker.js` evaluated in a Node VM with a browser-like global (no Node process), fetched from a nested HTTP path. Real WASM bytes served as `application/octet-stream` start successfully; profile creation, extrusion, all-edge fillet/chamfer and validity checks pass. No JavaScript dependency requests are made. HTTP 404/403, HTML fallback and truncated WASM produce specific errors. This is an HTTP/VM integration test, not a browser test.
+- Shipped `cad/worker-2.0.0-rc.6.js` evaluated in a Node VM with a browser-like global (no Node process), fetched from a nested HTTP path. Real WASM bytes served as `application/octet-stream` start successfully; profile creation, extrusion, all-edge fillet/chamfer and validity checks pass. No JavaScript dependency requests are made. HTTP 404/403, HTML fallback and truncated WASM produce specific errors. This is an HTTP/VM integration test, not a browser test.
 - Startup controller: wrong MIME and HTTP error diagnostics, timeout, pending-operation rejection, unsupported browser, direct-file rejection, and retry/stale-response races.
 - Service-worker manifest: worker/bundle/WASM/font paths exist and the handler ignores an unrelated application's URL. This is a source/manifest check, not an actual offline browser test.
 
@@ -49,31 +52,14 @@ The three STEP files were imported with CadQuery/Python OCCT, a separate reader/
 
 - All runtime files are local and referenced by relative paths.
 - The complete static folder and editable source are included; no `node_modules` or application server is required for runtime.
-- App version, HTML branding, package metadata and worker cache version identify `2.0.0-rc.5`.
+- App version, HTML branding, package metadata and worker cache version identify `2.0.0-rc.6`.
 - Pinned JS dependencies, vendor licenses, CAD source archives and SHA-256 provenance manifest are included.
 - `PACKAGE-CHECKSUMS.sha256` records the packaged files. The ZIP is checked for archive integrity and required runtime entries before delivery.
 
-## Unpassed release gate
+## Browser evidence and remaining release gate
 
-The hosted rc.1 page at `https://mbparks.com/sketchbench/` was reachable in the browser and reproduced the generic solid-engine failure reported by the user. The old handler discards the underlying Worker error. Direct asset requests were blocked (Cloudflare HTTP 403 / code 1010), and browser navigation to the old worker returned `ERR_BLOCKED_BY_CLIENT`; these observations do not establish the original failure cause in the user’s browser. No workaround was used to bypass those restrictions.
+On October 6, the hosted rc.5 app at `https://mbparks.com/sketchbench/` successfully initialized in the cloud Chrome browser. Native box → top-opening Shell → two-face midpoint Split Body succeeded. Undo followed by all-edge fillet → closed Shell → two-face midpoint Split Body also succeeded; the result was two native parts with the original hidden and material volume preserved. Rounded shell shading appeared coherent in that test.
 
-rc.2 removes the `.mjs` hosting dependency, makes binary MIME handling tolerant, and exposes the actual startup failure. It has not been deployed to that host, so successful startup there remains unverified. Previous local-browser restrictions also remain; no browser/GPU/offline acceptance pass is claimed.
+The user's newer screenshot shows “Unsupported solid operation.” while the Split Body panel has two valid parallel face references. The legacy-worker reproduction above establishes a matching failure mode, but does not inspect the user's actual cache contents. The separately reported Shell display change remains unreproduced without that project file.
 
-A stable v2.0 release still requires a reachable app installation for:
-
-1. Desktop/browser create → sketch → push/pull → round/bevel → undo → save/reload → STEP/STL export sessions.
-2. WebGL and Canvas displays, texture decoding, sections and transparency; desktop/tablet/phone layouts.
-3. Mouse/keyboard/pen/touch, pinch, context selection, dialogs, scene playback and accessibility checks.
-4. Real IndexedDB persistence, quota/denial, recovery and cross-tab behavior.
-5. Nested-route HTTPS install, all offline assets, offline reload and upgrade activation.
-6. Native file picking/downloads, PNG capture and print/PDF output, plus independent viewer/slicer visual inspection.
-
-The Green Shoe release convention requires this evidence before a stable version claim. The candidate contains the implementation; these missing checks are not represented as passes.
-
-## rc.3 viewport update
-
-The user screenshot shows rc.2 with “Solid engine ready.” Its face-grid orientation is consistent with the reproduced triangulation-edge problem. Native box faces could produce diagonal U/V axes; rc.3 uses a world-axis reference and projected world origin instead. The screenshot is user-provided evidence, not a browser acceptance run. rc.3 browser/layout acceptance remains unverified.
-
-## rc.4 Shell update
-
-128 automated tests pass. The shell uses actual OpenCascade geometry; face selection and modal interactions were tested with the DOM controller harness. The updated UI has not been deployed or accepted in a real browser. Server-package integrity is verified by extraction and byte comparison after saving, following the prior truncated-ZIP report.
+rc.6's compatibility changes have been checked with Node VM, HTTP, actual WASM and service-worker handler simulations. This build has not been deployed to the user's host or verified through an actual browser upgrade/offline cycle. Full desktop/GPU, touch, browser storage, accessibility and print acceptance remain open. No completed stable-v2.0 acceptance is claimed.

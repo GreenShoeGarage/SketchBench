@@ -1,3 +1,10 @@
+# 2.0.0-rc.6 — October 6, 2026
+
+- Fix the mixed-version runtime path behind the reported Split Body “Unsupported solid operation” error: use a release-specific geometry worker filename so older service-worker and HTTP caches cannot supply the previous worker under the same URL.
+- Verify the engine's release at startup and block geometry requests until a matching engine is ready. Mismatches produce an explicit update message and preserve the project.
+- Add regressions for missing/wrong version handshakes, recovery, legacy cache interception, current offline worker selection, and Shell followed by midpoint/offset splits through the shipped worker.
+- Include complete server-only update instructions without clearing project storage. No change to model geometry or Shell rendering is claimed in this maintenance release.
+
 # 2.0.0-rc.5 — October 6, 2026
 
 - Add visible drawing dimensions for rectangles, circles, lines/profiles and rotated rectangles. Unit-aware fields share the mouse preview, preserve drawing direction, and support Tab/Enter, keyboard numeric entry, click-drag and two-click drawing.

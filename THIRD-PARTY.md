@@ -6,7 +6,7 @@ SKETCHBENCH application code is GPL-3.0-only (`LICENSE`). Third-party components
 
 | Component | Pinned version / role | License / notice |
 | --- | --- | --- |
-| Replicad | 1.1.0, JS CAD wrapper bundled in `cad/worker.js` and the test/development bundle `cad/core.bundle.mjs` | MIT, `licenses/replicad.txt` |
+| Replicad | 1.1.0, JS CAD wrapper bundled in `cad/worker-2.0.0-rc.6.js` and the test/development bundle `cad/core.bundle.mjs` | MIT, `licenses/replicad.txt` |
 | replicad-opencascadejs | 1.1.0, unmodified single-threaded loader/WASM | LGPL-2.1-only, `licenses/replicad-opencascadejs.txt` |
 | Open CASCADE Technology | The pinned kernel builder's dependency is V8_0_1, commit `b8f597c677811d1f9f4d8a97f5ae2825c0353a42` | LGPL 2.1 plus Open CASCADE exception; notices in `licenses/` |
 | OpenCascade.js build tooling | `ebd263f15337b440b391492af073662707e86482` | LGPL 2.1 plus exception; source archive included |
